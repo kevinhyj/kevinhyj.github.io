@@ -14,14 +14,14 @@ SITE_TITLE = "Yanjie Huang"
 SITE_DESC = "AI4Bio, photos, projects, and small field notes."
 EMAIL = "huangyanjie@sjtu.edu.cn"
 GITHUB = "https://github.com/kevinhyj"
-AUTHOR_IMAGE = "/assets/posts/2026-04-23-keketuohai-skiing/06-gondola-portrait.jpg"
+AUTHOR_IMAGE = "/assets/shared/portraits/home-window.jpeg"
 HERO_IMAGE = "/assets/shared/portraits/home-window.jpeg"
 AUTHOR_BIO = "AI4Bio, foundation models, snow, notes, and Pixie someday."
 GALLERY = [
-    ("/assets/posts/2026-04-23-keketuohai-skiing/07-tanboer-slope.jpg", "Keketuohai slope"),
-    ("/assets/posts/2026-04-23-keketuohai-skiing/01-road-to-keketuohai.jpg", "Road to Keketuohai"),
-    ("/assets/posts/2026-04-23-keketuohai-skiing/08-helmet-selfie.jpg", "Snowboarding selfie"),
-    ("/assets/cat/pixie/cover.png", "Pixie placeholder"),
+    ("/assets/posts/2026-04-23-keketuohai-skiing/07-tanboer-slope.jpg", "Keketuohai snowboarding blog cover"),
+    ("/assets/posts/2025-02-21-hokkaido-junk/00-otaru-snow-night.jpg", "Hokkaido blog cover"),
+    ("/assets/posts/2024-10-30-nara-deer/06-ema-wishes.jpg", "Nara blog cover"),
+    ("/assets/posts/2024-10-26-osaka-universal-yoasobi/00-yoasobi-main-stage.jpg", "Osaka blog cover"),
 ]
 
 

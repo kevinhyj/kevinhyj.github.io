@@ -23,7 +23,7 @@ menu:
 author:
   name: "Yanjie Huang"
   bio: "AI4Bio, foundation models, snow, notes, and Pixie someday."
-  avatar: "/assets/posts/2026-04-23-keketuohai-skiing/06-gondola-portrait.jpg"
+  avatar: "/assets/shared/portraits/home-window.jpeg"
 
 social:
   - label: "Email"
@@ -47,14 +47,14 @@ blog:
   description: ""
 
 gallery:
-  - alt: "YOASOBI live in Osaka"
-    url: "/assets/posts/2024-10-26-osaka-universal-yoasobi/00-yoasobi-main-stage.jpg"
-  - alt: "Hogwarts castle at Universal Studios Japan"
-    url: "/assets/posts/2024-10-26-osaka-universal-yoasobi/03-hogwarts-castle.jpg"
-  - alt: "Osaka Castle"
-    url: "/assets/posts/2024-10-26-osaka-universal-yoasobi/08-osaka-castle.jpg"
-  - alt: "Keketuohai slope"
+  - alt: "Keketuohai snowboarding blog cover"
     url: "/assets/posts/2026-04-23-keketuohai-skiing/07-tanboer-slope.jpg"
+  - alt: "Hokkaido blog cover"
+    url: "/assets/posts/2025-02-21-hokkaido-junk/00-otaru-snow-night.jpg"
+  - alt: "Nara blog cover"
+    url: "/assets/posts/2024-10-30-nara-deer/06-ema-wishes.jpg"
+  - alt: "Osaka blog cover"
+    url: "/assets/posts/2024-10-26-osaka-universal-yoasobi/00-yoasobi-main-stage.jpg"
 
 contact:
   email: "huangyanjie@sjtu.edu.cn"

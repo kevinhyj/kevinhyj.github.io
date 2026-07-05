@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    {% assign settings = site.data.settings %}
+    <title>{% if page.title and page.title != "Home" %}{{ page.title }} | {% endif %}{{ settings.title | default: site.title }}</title>
+    <meta name="description" content="{{ page.description | default: settings.description | default: site.description }}">
+    <link rel="icon" href="{{ '/assets/shared/icons/favicon.svg' | relative_url }}" type="image/svg+xml">
+    <link rel="stylesheet" href="{{ '/assets/css/styles.css' | relative_url }}">
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container">
+        <a class="site-logo" href="{{ '/' | relative_url }}" aria-label="{{ settings.title }} home">
+          {{ settings.title | default: site.title }}
+        </a>
+
+        <nav class="site-nav" aria-label="Main navigation">
+          {% for item in settings.menu %}
+            {% if item.submenu %}
+              <div class="nav-dropdown">
+                <button class="nav-trigger" type="button" aria-haspopup="true">{{ item.title }}</button>
+                <div class="nav-submenu">
+                  {% for child in item.submenu %}
+                    <a href="{{ child.url | relative_url }}" {% if page.url contains child.url %}aria-current="page"{% endif %}>{{ child.title }}</a>
+                  {% endfor %}
+                </div>
+              </div>
+            {% else %}
+              <a href="{{ item.url | relative_url }}" {% if page.url == item.url or page.url contains item.url and item.url != "/" %}aria-current="page"{% endif %}>{{ item.title }}</a>
+            {% endif %}
+          {% endfor %}
+        </nav>
+      </div>
+    </header>
+
+    <main class="content" aria-label="Content">
+      {{ content }}
+    </main>
+
+    {% if settings.gallery %}
+      <section class="footer-gallery" aria-label="Photo gallery">
+        {% for image in settings.gallery %}
+          <img src="{{ image.url | relative_url }}" alt="{{ image.alt }}">
+        {% endfor %}
+      </section>
+    {% endif %}
+
+    <footer class="site-footer">
+      <div class="container footer-grid">
+        <div class="footer-author">
+          {% if settings.author.avatar %}
+            <img src="{{ settings.author.avatar | relative_url }}" alt="{{ settings.author.name }}">
+          {% endif %}
+          <div>
+            <h3>{{ settings.author.name }}</h3>
+            <p>{{ settings.author.bio }}</p>
+          </div>
+        </div>
+
+        <div class="footer-links">
+          {% for link in settings.social %}
+            {% assign href = link.url %}
+            {% if href contains "://" or href contains "mailto:" %}
+              <a href="{{ href }}">{{ link.label }}</a>
+            {% else %}
+              <a href="{{ href | relative_url }}">{{ link.label }}</a>
+            {% endif %}
+          {% endfor %}
+        </div>
+
+        <nav class="footer-nav" aria-label="Footer navigation">
+          {% for item in settings.menu %}
+            {% if item.submenu %}
+              {% for child in item.submenu %}
+                <a href="{{ child.url | relative_url }}">{{ child.title }}</a>
+              {% endfor %}
+            {% else %}
+              <a href="{{ item.url | relative_url }}">{{ item.title }}</a>
+            {% endif %}
+          {% endfor %}
+        </nav>
+      </div>
+    </footer>
+  </body>
+</html>

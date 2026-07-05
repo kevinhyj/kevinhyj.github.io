@@ -1,0 +1,61 @@
+# Site settings for the Ningshan-like visual theme.
+title: "Yanjie Huang"
+description: "AI4Bio, photos, projects, and small field notes."
+email: "huangyanjie@sjtu.edu.cn"
+github_username: "kevinhyj"
+
+menu:
+  - title: "Home"
+    url: "/"
+  - title: "Projects"
+    url: "/projects/"
+  - title: "Blog"
+    url: "/blog/"
+  - title: "Cat"
+    url: "/cat/"
+  - title: "Pages"
+    submenu:
+      - title: "About"
+        url: "/about/"
+      - title: "Contact"
+        url: "/contact/"
+
+author:
+  name: "Yanjie Huang"
+  bio: "AI4Bio, foundation models, snow, notes, and Pixie someday."
+  avatar: "/assets/posts/2026-04-23-keketuohai-skiing/06-gondola-portrait.jpg"
+
+social:
+  - label: "Email"
+    url: "mailto:huangyanjie@sjtu.edu.cn"
+  - label: "GitHub"
+    url: "https://github.com/kevinhyj"
+  - label: "Pixie"
+    url: "/cat/"
+
+hero:
+  title: "I'm Yanjie. What do I do for a living? I dream."
+  description: ""
+  image: "/assets/shared/portraits/home-window.jpeg"
+
+projects:
+  title: "Latest works"
+  description: "AI4Bio projects, generative models, and scientific agents."
+
+blog:
+  title: "Recent Posts"
+  description: ""
+
+gallery:
+  - alt: "YOASOBI live in Osaka"
+    url: "/assets/posts/2024-10-26-osaka-universal-yoasobi/00-yoasobi-main-stage.jpg"
+  - alt: "Hogwarts castle at Universal Studios Japan"
+    url: "/assets/posts/2024-10-26-osaka-universal-yoasobi/03-hogwarts-castle.jpg"
+  - alt: "Osaka Castle"
+    url: "/assets/posts/2024-10-26-osaka-universal-yoasobi/08-osaka-castle.jpg"
+  - alt: "Keketuohai slope"
+    url: "/assets/posts/2026-04-23-keketuohai-skiing/07-tanboer-slope.jpg"
+
+contact:
+  email: "huangyanjie@sjtu.edu.cn"
+  description: "For research, collaboration, and curious notes."

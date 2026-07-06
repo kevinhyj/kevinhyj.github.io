@@ -17,8 +17,9 @@ layout: default
           {% if page.status %}<span>{{ page.status }}</span>{% endif %}
         </div>
       </div>
-      {% if page.image %}
-        <img src="{{ page.image | relative_url }}" alt="{{ page.title }} visual">
+      {% assign project_image = page.detail_image | default: page.image %}
+      {% if project_image %}
+        <img src="{{ project_image | relative_url }}" alt="{{ page.title }} visual">
       {% endif %}
     </header>
 

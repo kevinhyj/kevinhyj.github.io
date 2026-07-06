@@ -358,7 +358,7 @@ def build_works(works):
         <p>{html.escape(work.get('subtitle', ''))}</p>
         <div class="meta-row">{meta}</div>
       </div>
-      <img src="{work['image']}" alt="{html.escape(work['title'])} visual">
+      <img src="{work.get('detail_image', work['image'])}" alt="{html.escape(work['title'])} visual">
     </header>
     <div class="project-content">
       <div class="prose">{markdown_to_html(work['body'])}</div>

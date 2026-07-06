@@ -7,6 +7,7 @@ role: "Team leader / co-first author"
 status: "Preprint"
 order: 3
 image: "/assets/works/rillie/rillie-fluorescent-aptamer-cover.png"
+detail_image: "/assets/works/rillie/broccoli-cell-imaging.svg"
 tags:
   - RNA design
   - Genomic foundation models
@@ -16,6 +17,11 @@ tags:
 ---
 
 <section class="project-visuals">
+  <figure class="project-figure project-figure-wide">
+    <img src="/assets/works/rillie/broccoli-cell-imaging.svg" alt="Broccoli fluorescent RNA aptamer cell imaging result">
+    <figcaption>Cell imaging result: designed Broccoli RNA aptamers produce visible fluorescent signal in cells.</figcaption>
+  </figure>
+
   <div class="project-figure-pair">
     <figure class="project-figure project-figure-wide">
       <img src="/assets/works/rillie/model-architecture.svg" alt="RILLIE model architecture diagram">

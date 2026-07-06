@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ProteoCraft | Yanjie Huang</title>
+    <meta name="description" content="AI4Bio, photos, projects, and small field notes.">
+    <link rel="icon" href="/assets/shared/icons/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="/assets/css/styles.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container">
+        <a class="site-logo" href="/" aria-label="Yanjie Huang home">Yanjie Huang</a>
+        <nav class="site-nav" aria-label="Main navigation">
+          <a href="/">Home</a>
+          <a href="/projects/">Projects</a>
+          <a href="/blog/">Blog</a>
+          <a href="/cat/">Cat</a>
+          <div class="nav-dropdown">
+            <button class="nav-trigger" type="button" aria-haspopup="true">Pages</button>
+            <div class="nav-submenu">
+              <a href="/about/">About</a>
+              <a href="/contact/">Contact</a>
+            </div>
+          </div>
+        </nav>
+      </div>
+    </header>
+    <main class="content" aria-label="Content"><article class="project-page">
+  <div class="container">
+    <a class="back-link" href="/projects/">Back to projects</a>
+    <header class="project-head">
+      <div>
+        <p class="eyebrow">Protein Foundation Model</p>
+        <h1>ProteoCraft</h1>
+        <p>A protein foundation-model system for proposal-verification search with frozen diffusion structure predictors.</p>
+        <div class="meta-row"><span>2026</span><span>Co-first author</span><span>Submitted to NeurIPS 2026</span></div>
+      </div>
+      <img src="/assets/works/proteocraft/method-overview-cover.png" alt="ProteoCraft visual">
+    </header>
+    <div class="project-content">
+      <div class="prose"><section class="project-visuals">
+  <figure class="project-figure project-figure-wide">
+    <img src="/assets/works/proteocraft/method-overview-cover.png" alt="ProteoCraft method overview">
+    <figcaption>Method overview: gradient proposals suggest local sequence edits, while full forward AF3-like verification ranks discrete protein designs.</figcaption>
+  </figure>
+  <figure class="project-figure project-figure-wide project-figure-compact">
+    <img src="/assets/works/proteocraft/applications.png" alt="ProteoCraft application targets">
+    <figcaption>Applications: cellular receptors, common allergens, multi-domain nucleases, TCR binders, and TCR CDR redesign.</figcaption>
+  </figure>
+  <figure class="project-figure project-figure-wide project-figure-compact">
+    <img src="/assets/works/proteocraft/benchmark-summary.png" alt="ProteoCraft benchmark summary table">
+    <figcaption>Benchmark summary: Rosetta filter pass rates across Type I de novo binder and TCR binder design tasks.</figcaption>
+  </figure>
+  <figure class="project-figure project-figure-wide project-figure-compact">
+    <img src="/assets/works/proteocraft/benchmark-detail.png" alt="ProteoCraft detailed benchmark table">
+    <figcaption>Detailed benchmark: target-level results for standard non-TCR binder targets and TCR-facing binder targets.</figcaption>
+  </figure>
+</section>
+<p>ProteoCraft is a protein foundation-model project for design under frozen diffusion-based structure predictors. It treats protein design as a proposal-verification search problem: truncated diffusion gradients are useful for proposing candidate mutations, but reliable values should come from complete forward prediction on discrete sequences.</p>
+<p>The framework is built around a hard-forward / soft-backward sequence bridge, gradient-prior Monte Carlo Tree Search, and region-localized masked losses. This lets the system search over mutable protein regions while keeping the broader molecular context fixed, which is important for binder design, TCR-facing interfaces, and localized CDR or TCR redesign.</p>
+<h2>What It Enables</h2>
+<ul>
+<li>Protein sequence design with AF3-like diffusion structure predictors without training a new model.</li>
+<li>Local mutation proposals from truncated diffusion gradients while preserving legal all-atom topology.</li>
+<li>Full-forward verification of candidate sequences before ranking.</li>
+<li>Search over de novo binders, immune-relevant TCR targets, and localized protein redesign tasks.</li>
+<li>Region-aware losses that optimize designated mutable regions while respecting fixed structural context.</li>
+</ul>
+<h2>My Role</h2>
+<p>I am a co-first author on ProteoCraft and worked across the foundation-model formulation, proposal-verification search design, benchmark analysis, figure/story construction, and manuscript development.</p>
+<h2>Release</h2>
+<p>The manuscript has been submitted to NeurIPS 2026. Public links, code, and paper materials will be added here after release.</p></div>
+      <aside class="side-panel"><h2>Tags</h2><div class="tag-list"><span>Protein foundation models</span><span>AlphaFold3-like predictors</span><span>Diffusion structure prediction</span><span>MCTS</span><span>Protein design</span><span>Binder design</span></div></aside>
+    </div>
+  </div>
+</article></main>
+    <section class="footer-gallery" aria-label="Photo gallery"><img src="/assets/posts/2026-04-23-keketuohai-skiing/07-tanboer-slope.jpg" alt="Keketuohai snowboarding blog cover">
+<img src="/assets/posts/2025-02-21-hokkaido-junk/00-otaru-snow-night.jpg" alt="Hokkaido blog cover">
+<img src="/assets/posts/2024-10-30-nara-deer/06-ema-wishes.jpg" alt="Nara blog cover">
+<img src="/assets/posts/2024-10-26-osaka-universal-yoasobi/00-yoasobi-main-stage.jpg" alt="Osaka blog cover"></section>
+    <footer class="site-footer">
+      <div class="container footer-grid">
+        <div class="footer-author">
+          <img src="/assets/shared/portraits/home-window.jpeg" alt="Yanjie Huang">
+          <div>
+            <h3>Yanjie Huang</h3>
+            <p>AI4Bio, foundation models, snow, notes, and Pixie someday.</p>
+          </div>
+        </div>
+        <div class="footer-links">
+          <a href="mailto:huangyanjie@sjtu.edu.cn">Email</a>
+          <a href="https://github.com/kevinhyj">GitHub</a>
+          <a href="/cat/">Pixie</a>
+        </div>
+        <nav class="footer-nav" aria-label="Footer navigation">
+          <a href="/">Home</a>
+          <a href="/projects/">Projects</a>
+          <a href="/blog/">Blog</a>
+          <a href="/cat/">Cat</a>
+          <a href="/about/">About</a>
+          <a href="/contact/">Contact</a>
+        </nav>
+      </div>
+    </footer>
+  </body>
+</html>

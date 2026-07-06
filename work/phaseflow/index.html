@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>PhaseFlow | Yanjie Huang</title>
+    <meta name="description" content="AI4Bio, photos, projects, and small field notes.">
+    <link rel="icon" href="/assets/shared/icons/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="/assets/css/styles.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container">
+        <a class="site-logo" href="/" aria-label="Yanjie Huang home">Yanjie Huang</a>
+        <nav class="site-nav" aria-label="Main navigation">
+          <a href="/">Home</a>
+          <a href="/projects/">Projects</a>
+          <a href="/blog/">Blog</a>
+          <a href="/cat/">Cat</a>
+          <div class="nav-dropdown">
+            <button class="nav-trigger" type="button" aria-haspopup="true">Pages</button>
+            <div class="nav-submenu">
+              <a href="/about/">About</a>
+              <a href="/contact/">Contact</a>
+            </div>
+          </div>
+        </nav>
+      </div>
+    </header>
+    <main class="content" aria-label="Content"><article class="project-page">
+  <div class="container">
+    <a class="back-link" href="/projects/">Back to projects</a>
+    <header class="project-head">
+      <div>
+        <p class="eyebrow">Protein Foundation Model</p>
+        <h1>PhaseFlow</h1>
+        <p>A unified model for multi-modal and multi-scale phase-separating protein understanding and design.</p>
+        <div class="meta-row"><span>2026</span><span>Team leader / co-first author</span><span>Nature, submitted</span></div>
+      </div>
+      <img src="/assets/works/phaseflow/cover.png" alt="PhaseFlow visual">
+    </header>
+    <div class="project-content">
+      <div class="prose"><section class="project-visuals">
+  <figure class="project-figure project-figure-wide">
+    <img src="/assets/works/phaseflow/model-architecture.svg" alt="PhaseFlow model architecture diagram">
+    <figcaption>Model architecture: peptide sequence-phase learning, Flow Matching, and full-length protein context for LLPS prediction and design.</figcaption>
+  </figure>
+  <figure class="project-figure project-figure-wide project-figure-scroll">
+    <img src="/assets/works/phaseflow/application-map.svg" alt="PhaseFlow application map">
+    <figcaption>Application map: protein-level LLPS prediction, DPR scanning, peptide phase-diagram generation, and mutation-scale optimization.</figcaption>
+  </figure>
+</section>
+<div class="resource-links">
+  <a href="https://github.com/kevinhyj/PhaseFlow" target="_blank" rel="noopener">GitHub</a>
+</div>
+<p>PhaseFlow is a multimodal generative model for liquid-liquid phase separation (LLPS). It connects full-length protein understanding, peptide-scale phase diagrams, and mutation-level optimization in one workflow.</p>
+<p>The core peptide module jointly models amino acid sequences and 4x4 PSSI phase diagrams. A Transfusion-style Transformer combines autoregressive sequence modeling with Conditional Optimal Transport Flow Matching over continuous phase values, enabling both sequence-to-phase prediction and phase-to-sequence design. A full-length GNN-Transformer branch then brings in long-range sequence, structural, disorder, and peptide-derived local phase evidence for protein-scale LLPS prediction and droplet-promoting region scanning.</p>
+<h2>What It Enables</h2>
+<ul>
+<li>Predicting full 4x4 LLPS phase diagrams from peptide sequences.</li>
+<li>Generating novel peptide sequences conditioned on target phase behavior.</li>
+<li>Predicting full-length protein LLPS propensity.</li>
+<li>Scanning proteins for droplet-promoting regions.</li>
+<li>Scoring mutation effects and steering in-silico directed evolution toward desired phase profiles.</li>
+</ul>
+<h2>My Role</h2>
+<p>I worked across dataset processing, model design, training and evaluation, inference-time optimization, design workflows, and scientific visualization. I also helped shape PhaseFlow into a multi-scale system that links protein-level prediction, peptide-level generation, and mutation-level optimization.</p>
+<h2>Release</h2>
+<p>The public repository provides the PhaseFlow codebase for training, inference, sequence-to-phase prediction, phase-conditioned sequence generation, and directed-evolution style optimization.</p></div>
+      <aside class="side-panel"><h2>Links</h2><a href="https://github.com/kevinhyj/PhaseFlow" target="_blank" rel="noopener">GitHub</a><h2>Tags</h2><div class="tag-list"><span>LLPS</span><span>Protein design</span><span>Flow matching</span><span>Multimodal learning</span></div></aside>
+    </div>
+  </div>
+</article></main>
+    <section class="footer-gallery" aria-label="Photo gallery"><img src="/assets/posts/2026-04-23-keketuohai-skiing/07-tanboer-slope.jpg" alt="Keketuohai snowboarding blog cover">
+<img src="/assets/posts/2025-02-21-hokkaido-junk/00-otaru-snow-night.jpg" alt="Hokkaido blog cover">
+<img src="/assets/posts/2024-10-30-nara-deer/06-ema-wishes.jpg" alt="Nara blog cover">
+<img src="/assets/posts/2024-10-26-osaka-universal-yoasobi/00-yoasobi-main-stage.jpg" alt="Osaka blog cover"></section>
+    <footer class="site-footer">
+      <div class="container footer-grid">
+        <div class="footer-author">
+          <img src="/assets/shared/portraits/home-window.jpeg" alt="Yanjie Huang">
+          <div>
+            <h3>Yanjie Huang</h3>
+            <p>AI4Bio, foundation models, snow, notes, and Pixie someday.</p>
+          </div>
+        </div>
+        <div class="footer-links">
+          <a href="mailto:huangyanjie@sjtu.edu.cn">Email</a>
+          <a href="https://github.com/kevinhyj">GitHub</a>
+          <a href="/cat/">Pixie</a>
+        </div>
+        <nav class="footer-nav" aria-label="Footer navigation">
+          <a href="/">Home</a>
+          <a href="/projects/">Projects</a>
+          <a href="/blog/">Blog</a>
+          <a href="/cat/">Cat</a>
+          <a href="/about/">About</a>
+          <a href="/contact/">Contact</a>
+        </nav>
+      </div>
+    </footer>
+  </body>
+</html>

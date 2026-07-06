@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>EVA | Yanjie Huang</title>
+    <meta name="description" content="AI4Bio, photos, projects, and small field notes.">
+    <link rel="icon" href="/assets/shared/icons/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="/assets/css/styles.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container">
+        <a class="site-logo" href="/" aria-label="Yanjie Huang home">Yanjie Huang</a>
+        <nav class="site-nav" aria-label="Main navigation">
+          <a href="/">Home</a>
+          <a href="/projects/">Projects</a>
+          <a href="/blog/">Blog</a>
+          <a href="/cat/">Cat</a>
+          <div class="nav-dropdown">
+            <button class="nav-trigger" type="button" aria-haspopup="true">Pages</button>
+            <div class="nav-submenu">
+              <a href="/about/">About</a>
+              <a href="/contact/">Contact</a>
+            </div>
+          </div>
+        </nav>
+      </div>
+    </header>
+    <main class="content" aria-label="Content"><article class="project-page">
+  <div class="container">
+    <a class="back-link" href="/projects/">Back to projects</a>
+    <header class="project-head">
+      <div>
+        <p class="eyebrow">Genomic Foundation Model</p>
+        <h1>EVA</h1>
+        <p>A long-context generative RNA foundation model for universal modeling and controllable design.</p>
+        <div class="meta-row"><span>2026</span><span>Team leader / co-first author</span><span>Nature Machine Intelligence, under revision</span></div>
+      </div>
+      <img src="/assets/works/eva/cover.png" alt="EVA visual">
+    </header>
+    <div class="project-content">
+      <div class="prose"><section class="project-visuals">
+  <figure class="project-figure project-figure-wide">
+    <img src="/assets/works/eva/model-architecture.svg" alt="EVA model architecture diagram">
+    <figcaption>Model architecture: long-context MoE Transformer with CLM and GLM generation paradigms.</figcaption>
+  </figure>
+  <figure class="project-figure project-figure-tall">
+    <img src="/assets/works/eva/application-concept.svg" alt="EVA application concept for RNA modeling and design">
+    <figcaption>Application concept: EVA as a model for RNA understanding, generation, optimization, and design.</figcaption>
+  </figure>
+</section>
+<div class="resource-links">
+  <a href="https://github.com/GENTEL-lab/EVA" target="_blank" rel="noopener">GitHub</a>
+  <a href="https://huggingface.co/GENTEL-Lab/EVA" target="_blank" rel="noopener">Hugging Face</a>
+  <a href="https://evabio.net" target="_blank" rel="noopener">Online Demo</a>
+</div>
+<p>EVA, short for Evolutionary Versatile Architect, is a generative RNA foundation model built for full-length RNA modeling and controllable RNA design. It learns from OpenRNA v1, a curated atlas of 114 million full-length RNA sequences across domains of life, and uses a 1.4B-parameter decoder-only Transformer with a Mixture-of-Experts backbone and an 8,192-token context window.</p>
+<p>The model unifies RNA sequence scoring and generation in one framework. Causal language modeling supports de novo design and continuation, while general language modeling supports span infilling and domain redesign. EVA can condition generation on RNA type and taxonomic lineage, making it useful for designing mRNA, tRNA, rRNA, lncRNA, miRNA, circRNA, viral RNA, and other RNA classes.</p>
+<h2>What It Enables</h2>
+<ul>
+<li>Full-length RNA sequence modeling without aggressive truncation.</li>
+<li>Zero-shot RNA fitness prediction and log-likelihood scoring.</li>
+<li>Controllable generation by RNA type, species, or lineage.</li>
+<li>De novo RNA design, domain redesign, and in-silico directed evolution.</li>
+<li>Sequence-to-structure-aware optimization for practical RNA engineering tasks.</li>
+</ul>
+<h2>My Role</h2>
+<p>As Y.H., I designed the EVA architecture and wrote the first training, inference, and fine-tuning code. I led model training and evaluation, co-curated the pretraining data, drove RNA design studies across tRNA, aptamer, CRISPR omegaRNA, vaccine, and circRNA IRES tasks, and co-created the conceptual figures, usage website, and first manuscript draft.</p>
+<h2>Release</h2>
+<p>The public EVA repository releases training, finetuning, inference, generation, scoring, and directed-evolution code, with model and data access documented for reproducible use.</p></div>
+      <aside class="side-panel"><h2>Links</h2><a href="https://github.com/GENTEL-lab/EVA" target="_blank" rel="noopener">GitHub</a><a href="https://huggingface.co/GENTEL-Lab/EVA" target="_blank" rel="noopener">Hugging Face</a><a href="https://evabio.net" target="_blank" rel="noopener">Try EVA</a><a href="https://www.biorxiv.org/content/10.64898/2026.03.17.712398v2" target="_blank" rel="noopener">BioRxiv</a><h2>Tags</h2><div class="tag-list"><span>RNA</span><span>MoE Transformer</span><span>OpenRNA</span><span>CLM / GLM</span></div></aside>
+    </div>
+  </div>
+</article></main>
+    <section class="footer-gallery" aria-label="Photo gallery"><img src="/assets/posts/2026-04-23-keketuohai-skiing/07-tanboer-slope.jpg" alt="Keketuohai snowboarding blog cover">
+<img src="/assets/posts/2025-02-21-hokkaido-junk/00-otaru-snow-night.jpg" alt="Hokkaido blog cover">
+<img src="/assets/posts/2024-10-30-nara-deer/06-ema-wishes.jpg" alt="Nara blog cover">
+<img src="/assets/posts/2024-10-26-osaka-universal-yoasobi/00-yoasobi-main-stage.jpg" alt="Osaka blog cover"></section>
+    <footer class="site-footer">
+      <div class="container footer-grid">
+        <div class="footer-author">
+          <img src="/assets/shared/portraits/home-window.jpeg" alt="Yanjie Huang">
+          <div>
+            <h3>Yanjie Huang</h3>
+            <p>AI4Bio, foundation models, snow, notes, and Pixie someday.</p>
+          </div>
+        </div>
+        <div class="footer-links">
+          <a href="mailto:huangyanjie@sjtu.edu.cn">Email</a>
+          <a href="https://github.com/kevinhyj">GitHub</a>
+          <a href="/cat/">Pixie</a>
+        </div>
+        <nav class="footer-nav" aria-label="Footer navigation">
+          <a href="/">Home</a>
+          <a href="/projects/">Projects</a>
+          <a href="/blog/">Blog</a>
+          <a href="/cat/">Cat</a>
+          <a href="/about/">About</a>
+          <a href="/contact/">Contact</a>
+        </nav>
+      </div>
+    </footer>
+  </body>
+</html>

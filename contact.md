@@ -8,7 +8,7 @@ subtitle: "For PhD applications, research collaborations, and research engineeri
 <section class="section page-section">
   <div class="container">
     <div class="contact-layout">
-      <img src="{{ '/assets/posts/2026-04-23-keketuohai-skiing/03-keketuohai-sign.jpg' | relative_url }}" alt="Keketuohai visual">
+      <img src="{{ '/assets/shared/portraits/home-window.jpeg' | relative_url }}" alt="Yanjie Huang">
       <div class="contact-copy">
         <p class="eyebrow">PhD applications · research collaborations · research engineering</p>
         <h2>Let’s talk about models for living systems.</h2>

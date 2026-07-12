@@ -10,7 +10,7 @@ description: "Academic background, research experience, publications, and techni
   <div class="container">
     <div class="cv-profile">
       <div class="cv-profile-copy">
-        <p class="cv-lead">I am an undergraduate researcher at Shanghai Jiao Tong University building foundation and reasoning models for biological discovery. My work spans RNA and protein design, multimodal molecular models, diffusion, and post-training.</p>
+        <p class="cv-lead">I am an undergraduate researcher at Shanghai Jiao Tong University. My research lies at the intersection of generative AI and scientific discovery, with a focus on reasoning, alignment and molecular design.</p>
         <div class="resource-links cv-actions">
           <a href="mailto:huangyanjie@sjtu.edu.cn">Email me</a>
           <a class="cv-action-secondary" href="https://github.com/kevinhyj" target="_blank" rel="noopener">GitHub</a>
@@ -33,7 +33,7 @@ description: "Academic background, research experience, publications, and techni
         </div>
         <div>
           <dt>Focus</dt>
-          <dd>AI for Biology</dd>
+          <dd>AI &amp; AI for Bio</dd>
         </div>
       </dl>
     </div>
@@ -152,7 +152,7 @@ description: "Academic background, research experience, publications, and techni
           <div>
             <h3>PhaseFlow: A Unified Model for Multi-modal and Multi-scale Phase-separating Protein Understanding and Design</h3>
             <p>Y. Zhu*, <strong>Y. Huang*</strong>, et al. · <em>Nature</em>, submitted · 2026</p>
-            <a href="https://github.com/kevinhyj/PhaseFlow" target="_blank" rel="noopener">Project repository</a>
+            <a href="{{ '/work/phaseflow/' | relative_url }}">Project page</a>
           </div>
         </article>
         <article class="cv-publication">

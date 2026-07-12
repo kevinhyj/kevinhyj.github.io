@@ -213,6 +213,19 @@ img {
   text-transform: lowercase;
 }
 
+.project-card .card-content .project-status {
+  background: var(--text);
+  border-radius: 999px;
+  color: white;
+  display: inline-flex;
+  font-size: 0.68rem;
+  letter-spacing: 0.02em;
+  margin-left: 8px;
+  padding: 2px 7px;
+  text-transform: uppercase;
+  vertical-align: 1px;
+}
+
 .project-grid,
 .post-card-grid {
   display: grid;

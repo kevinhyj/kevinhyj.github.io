@@ -5,6 +5,7 @@ kind: "Scientific Agents"
 year: "2026"
 role: "Builder"
 status: "In progress"
+hidden: true
 order: 7
 image: "/assets/works/syntharchitect/cover.png"
 tags:

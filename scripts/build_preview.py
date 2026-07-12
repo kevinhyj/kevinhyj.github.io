@@ -233,7 +233,8 @@ def load_works():
         data["slug"] = path.stem
         data["url"] = f"/work/{path.stem}/"
         data["body"] = body
-        works.append(data)
+        if str(data.get("hidden", "")).lower() != "true":
+            works.append(data)
     return sorted(works, key=lambda item: int(item.get("order", 999)))
 
 
@@ -252,10 +253,11 @@ def load_posts():
 
 
 def project_card(work, heading="h3") -> str:
+    status = '<span class="project-status">In progress</span>' if work.get("status") == "In progress" else ""
     return f"""<a class="project-card project-card-{work['slug']}" href="{work['url']}">
   <img src="{work['image']}" alt="{html.escape(work['title'])} visual">
   <div class="card-content">
-    <p>{html.escape(work.get('kind', 'Project'))}</p>
+    <p>{html.escape(work.get('kind', 'Project'))}{status}</p>
     <{heading}>{html.escape(work['title'])}</{heading}>
     <span>{html.escape(work.get('subtitle', ''))}</span>
   </div>

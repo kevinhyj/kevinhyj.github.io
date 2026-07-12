@@ -257,7 +257,7 @@ img {
   color: var(--accent);
   display: flex;
   aspect-ratio: 16 / 11;
-  font-size: clamp(4rem, 10vw, 8rem);
+  font-size: clamp(8rem, 16vw, 13rem);
   font-weight: 850;
   justify-content: center;
   line-height: 1;
@@ -266,6 +266,7 @@ img {
 
 .project-placeholder-detail {
   aspect-ratio: 4 / 3;
+  font-size: clamp(9rem, 16vw, 14rem);
 }
 
 .project-card-proteocraft img {

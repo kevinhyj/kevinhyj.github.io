@@ -6,7 +6,6 @@ year: "2026"
 role: "Team leader"
 status: "In progress"
 order: 8
-image: "/assets/works/alpha-rare/cover.png"
 tags:
   - Protein design
   - Non-canonical amino acids

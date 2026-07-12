@@ -254,8 +254,9 @@ def load_posts():
 
 def project_card(work, heading="h3") -> str:
     status = '<span class="project-status">In progress</span>' if work.get("status") == "In progress" else ""
+    image = f'<img src="{work["image"]}" alt="{html.escape(work["title"])} visual">' if work.get("image") else f'<div class="project-placeholder" role="img" aria-label="{html.escape(work["title"])} image coming soon">?</div>'
     return f"""<a class="project-card project-card-{work['slug']}" href="{work['url']}">
-  <img src="{work['image']}" alt="{html.escape(work['title'])} visual">
+  {image}
   <div class="card-content">
     <p>{html.escape(work.get('kind', 'Project'))}{status}</p>
     <{heading}>{html.escape(work['title'])}</{heading}>
@@ -362,7 +363,7 @@ def build_works(works):
         <p>{html.escape(work.get('subtitle', ''))}</p>
         <div class="meta-row">{meta}</div>
       </div>
-      <img src="{work.get('detail_image', work['image'])}" alt="{html.escape(work['title'])} visual">
+      {f'<img src="{work.get("detail_image", work["image"])}" alt="{html.escape(work["title"])} visual">' if work.get("detail_image", work.get("image")) else f'<div class="project-placeholder project-placeholder-detail" role="img" aria-label="{html.escape(work["title"])} image coming soon">?</div>'}
     </header>
     <div class="project-content">
       <div class="prose">{markdown_to_html(work['body'])}</div>

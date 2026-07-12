@@ -20,6 +20,8 @@ layout: default
       {% assign project_image = page.detail_image | default: page.image %}
       {% if project_image %}
         <img src="{{ project_image | relative_url }}" alt="{{ page.title }} visual">
+      {% elsif page.status == "In progress" %}
+        <div class="project-placeholder project-placeholder-detail" role="img" aria-label="{{ page.title }} image coming soon">?</div>
       {% endif %}
     </header>
 

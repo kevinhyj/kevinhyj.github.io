@@ -37,7 +37,7 @@ description: "Yanjie Huang's visual garden for AI4Bio research, projects, and fi
       {% for work in sorted_works limit:6 %}
         {% unless work.hidden %}
           <a class="project-card project-card-{{ work.slug }}" href="{{ work.url | relative_url }}">
-            {% if work.image %}<img src="{{ work.image | relative_url }}" alt="{{ work.title }} visual">{% endif %}
+            {% if work.image %}<img src="{{ work.image | relative_url }}" alt="{{ work.title }} visual">{% elsif work.status == "In progress" %}<div class="project-placeholder" role="img" aria-label="{{ work.title }} image coming soon">?</div>{% endif %}
             <div class="card-content">
               <p>{{ work.kind }}{% if work.status == "In progress" %}<span class="project-status">In progress</span>{% endif %}</p>
               <h3>{{ work.title }}</h3>

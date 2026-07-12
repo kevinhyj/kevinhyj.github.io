@@ -249,6 +249,25 @@ img {
   width: 100%;
 }
 
+.project-placeholder {
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--accent);
+  display: flex;
+  aspect-ratio: 16 / 11;
+  font-size: clamp(4rem, 10vw, 8rem);
+  font-weight: 850;
+  justify-content: center;
+  line-height: 1;
+  width: 100%;
+}
+
+.project-placeholder-detail {
+  aspect-ratio: 4 / 3;
+}
+
 .project-card-proteocraft img {
   background: var(--surface);
   object-fit: contain;

@@ -6,7 +6,6 @@ year: "2026"
 role: "Research project"
 status: "In progress"
 order: 7
-image: "/assets/works/rl-diffusion/ningshan/rl-diffusion-000.png"
 tags:
   - Qwen-VL
   - Diffusion models

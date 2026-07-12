@@ -70,7 +70,7 @@ description: "Academic background, research experience, publications, and techni
         <article class="cv-entry cv-entry-featured">
           <div class="cv-entry-head">
             <div class="cv-institution">
-              <img class="cv-institution-logo cv-institution-logo-stanford" src="{{ '/assets/shared/logos/stanford.png' | relative_url }}" alt="Stanford University logo">
+              <img class="cv-institution-logo cv-institution-logo-stanford" src="{{ '/assets/shared/logos/stanford.webp' | relative_url }}" alt="Stanford University logo">
               <div>
                 <h3>Stanford University · Yejin Choi Group</h3>
                 <p class="cv-role">Research Intern</p>
@@ -91,7 +91,7 @@ description: "Academic background, research experience, publications, and techni
         <article class="cv-entry">
           <div class="cv-entry-head">
             <div class="cv-institution">
-              <img class="cv-institution-logo cv-institution-logo-lin-gang" src="{{ '/assets/shared/logos/lin-gang-laboratory.webp' | relative_url }}" alt="Lin Gang Laboratory logo">
+              <img class="cv-institution-logo cv-institution-logo-lin-gang" src="{{ '/assets/shared/logos/lin-gang-laboratory.png' | relative_url }}" alt="Lin Gang Laboratory logo">
               <div>
                 <h3>Lin Gang Laboratory · AI Research Division</h3>
                 <p class="cv-role">Research Intern · Shanghai</p>

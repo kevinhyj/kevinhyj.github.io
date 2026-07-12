@@ -13,12 +13,10 @@ menu:
     url: "/cv/"
   - title: "Blog"
     url: "/blog/"
-  - title: "Cat"
-    url: "/cat/"
   - title: "Pages"
     submenu:
-      - title: "About"
-        url: "/about/"
+      - title: "Cat"
+        url: "/cat/"
       - title: "Contact"
         url: "/contact/"
 

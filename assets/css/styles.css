@@ -804,6 +804,22 @@ img {
   aspect-ratio: 4 / 3;
 }
 
+.contact-copy h2 {
+  font-size: 3.4rem;
+  letter-spacing: 0;
+  line-height: 1;
+  margin: 0 0 16px;
+  max-width: 580px;
+}
+
+.contact-copy > p:not(.eyebrow) {
+  color: var(--muted);
+  font-size: 1.06rem;
+  line-height: 1.65;
+  margin: 0 0 24px;
+  max-width: 580px;
+}
+
 .contact-list {
   display: grid;
   gap: 14px;
@@ -822,6 +838,24 @@ img {
   font-size: 0.78rem;
   font-weight: 820;
   text-transform: lowercase;
+}
+
+.contact-note {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 10px 30px;
+  grid-template-columns: 0.25fr 0.75fr;
+  margin-top: 54px;
+  padding-top: 20px;
+}
+
+.contact-note .eyebrow,
+.contact-note p:last-child {
+  margin: 0;
+}
+
+.contact-note p:last-child {
+  color: var(--muted);
 }
 
 .empty-state {

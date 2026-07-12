@@ -14,7 +14,7 @@
 
 放在：
 
-- `assets/shared/portraits/`：头像、About 页照片。
+- `assets/shared/portraits/`：头像和个人照片。
 - `assets/shared/gallery/`：首页生活/实验室/gallery 图片。
 - `assets/shared/icons/`：favicon、站点小图标。
 

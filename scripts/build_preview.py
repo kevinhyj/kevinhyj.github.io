@@ -173,11 +173,10 @@ def default_layout(title: str, body: str, description: str = "") -> str:
           <a href="/projects/">Projects</a>
           <a href="/cv/">CV</a>
           <a href="/blog/">Blog</a>
-          <a href="/cat/">Cat</a>
           <div class="nav-dropdown">
             <button class="nav-trigger" type="button" aria-haspopup="true">Pages</button>
             <div class="nav-submenu">
-              <a href="/about/">About</a>
+              <a href="/cat/">Cat</a>
               <a href="/contact/">Contact</a>
             </div>
           </div>
@@ -206,7 +205,6 @@ def default_layout(title: str, body: str, description: str = "") -> str:
           <a href="/cv/">CV</a>
           <a href="/blog/">Blog</a>
           <a href="/cat/">Cat</a>
-          <a href="/about/">About</a>
           <a href="/contact/">Contact</a>
         </nav>
       </div>
@@ -400,7 +398,7 @@ def build_posts(posts):
   <div class="container">
     <div class="post-tags">{tags}</div>
     <h1>{html.escape(post['title'])}</h1>
-    <p class="post-meta"><a href="/about/">Yanjie Huang</a><span>–</span><time datetime="{html.escape(datetime_value(post.get('date', '')))}">{display_date(post.get('date', ''))}</time></p>
+    <p class="post-meta"><a href="/cv/">Yanjie Huang</a><span>–</span><time datetime="{html.escape(datetime_value(post.get('date', '')))}">{display_date(post.get('date', ''))}</time></p>
     {orbit}
   </div>
 </header>
@@ -439,12 +437,11 @@ def main():
     build_works(works)
     build_blog(posts)
     build_posts(posts)
-    build_simple_page("about.md")
     build_simple_page("cv.md")
     build_simple_page("cat.md")
     build_simple_page("contact.md")
     write_page("/works/", "Projects", '<section class="section page-section"><div class="container"><div class="empty-state"><h2>Works moved to Projects.</h2><p>The research portfolio now lives at <a href="/projects/">Projects</a>.</p><a class="button" href="/projects/">Open Projects</a></div></div></section>')
-    write_page("/404.html", "Page Not Found", '<section class="section page-section"><div class="container"><div class="empty-state"><h2>This path has not grown a page yet.</h2><p>Try the home page, projects, blog, about, contact, or Pixie page.</p><a class="button" href="/">Return home</a></div></div></section>')
+    write_page("/404.html", "Page Not Found", '<section class="section page-section"><div class="container"><div class="empty-state"><h2>This path has not grown a page yet.</h2><p>Try the home page, projects, blog, CV, contact, or Pixie page.</p><a class="button" href="/">Return home</a></div></div></section>')
     (OUT / "robots.txt").write_text((ROOT / "robots.txt").read_text(encoding="utf-8"), encoding="utf-8")
     print(f"Built preview at {OUT}")
 

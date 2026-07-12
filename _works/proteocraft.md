@@ -1,6 +1,6 @@
 ---
 title: "ProteoCraft"
-subtitle: "A protein foundation-model system for proposal-verification search with frozen diffusion structure predictors."
+subtitle: "AF3-based hallucination with inference-time scaling for binder and TCR design"
 kind: "Protein Foundation Model"
 year: "2026"
 role: "Co-first author"

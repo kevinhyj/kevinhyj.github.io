@@ -171,6 +171,7 @@ def default_layout(title: str, body: str, description: str = "") -> str:
         <nav class="site-nav" aria-label="Main navigation">
           <a href="/">Home</a>
           <a href="/projects/">Projects</a>
+          <a href="/cv/">CV</a>
           <a href="/blog/">Blog</a>
           <a href="/cat/">Cat</a>
           <div class="nav-dropdown">
@@ -202,6 +203,7 @@ def default_layout(title: str, body: str, description: str = "") -> str:
         <nav class="footer-nav" aria-label="Footer navigation">
           <a href="/">Home</a>
           <a href="/projects/">Projects</a>
+          <a href="/cv/">CV</a>
           <a href="/blog/">Blog</a>
           <a href="/cat/">Cat</a>
           <a href="/about/">About</a>
@@ -435,6 +437,7 @@ def main():
     build_blog(posts)
     build_posts(posts)
     build_simple_page("about.md")
+    build_simple_page("cv.md")
     build_simple_page("cat.md")
     build_simple_page("contact.md")
     write_page("/works/", "Projects", '<section class="section page-section"><div class="container"><div class="empty-state"><h2>Works moved to Projects.</h2><p>The research portfolio now lives at <a href="/projects/">Projects</a>.</p><a class="button" href="/projects/">Open Projects</a></div></div></section>')

@@ -1,6 +1,6 @@
 ---
 title: "Proteo-R1 / Proteo-R2"
-subtitle: "Protein reasoning models for antibody design, enzyme design, and synthetic-protein CoT data."
+subtitle: "Multi-modal Reasoning for Multi-scale Biomolecule Understanding and Design"
 kind: "Protein Reasoning Model"
 year: "2026"
 status: "R1: ICML 2026 accepted / R2: in progress"

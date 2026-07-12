@@ -46,9 +46,12 @@ description: "Academic background, research experience, publications, and techni
       <div class="cv-section-body">
         <article class="cv-entry">
           <div class="cv-entry-head">
-            <div>
-              <h3>Shanghai Jiao Tong University</h3>
-              <p class="cv-role">Bachelor of Computer Science and Technology</p>
+            <div class="cv-institution">
+              <img class="cv-institution-logo cv-institution-logo-sjtu" src="{{ '/assets/shared/logos/sjtu.png' | relative_url }}" alt="Shanghai Jiao Tong University logo">
+              <div>
+                <h3>Shanghai Jiao Tong University</h3>
+                <p class="cv-role">Bachelor of Computer Science and Technology</p>
+              </div>
             </div>
             <p class="cv-date">Sep 2023 – Jun 2027</p>
           </div>
@@ -66,9 +69,12 @@ description: "Academic background, research experience, publications, and techni
       <div class="cv-section-body">
         <article class="cv-entry cv-entry-featured">
           <div class="cv-entry-head">
-            <div>
-              <h3>Stanford University · Yejin Choi Group</h3>
-              <p class="cv-role">Research Intern</p>
+            <div class="cv-institution">
+              <img class="cv-institution-logo cv-institution-logo-stanford" src="{{ '/assets/shared/logos/stanford.png' | relative_url }}" alt="Stanford University logo">
+              <div>
+                <h3>Stanford University · Yejin Choi Group</h3>
+                <p class="cv-role">Research Intern</p>
+              </div>
             </div>
             <p class="cv-date">Apr 2026 – Present</p>
           </div>
@@ -84,9 +90,12 @@ description: "Academic background, research experience, publications, and techni
 
         <article class="cv-entry">
           <div class="cv-entry-head">
-            <div>
-              <h3>Lin Gang Laboratory · AI Research Division</h3>
-              <p class="cv-role">Research Intern · Shanghai</p>
+            <div class="cv-institution">
+              <img class="cv-institution-logo cv-institution-logo-lin-gang" src="{{ '/assets/shared/logos/lin-gang-laboratory.webp' | relative_url }}" alt="Lin Gang Laboratory logo">
+              <div>
+                <h3>Lin Gang Laboratory · AI Research Division</h3>
+                <p class="cv-role">Research Intern · Shanghai</p>
+              </div>
             </div>
             <p class="cv-date">Sep 2025 – Present</p>
           </div>

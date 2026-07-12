@@ -883,9 +883,9 @@ img {
 .cv-profile {
   align-items: stretch;
   display: grid;
-  gap: 38px;
+  gap: 28px;
   grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr);
-  padding: 12px 0 68px;
+  padding: 8px 0 42px;
 }
 
 .cv-profile-copy {
@@ -893,14 +893,14 @@ img {
 }
 
 .cv-lead {
-  font-size: 1.34rem;
-  line-height: 1.58;
+  font-size: 1.2rem;
+  line-height: 1.48;
   margin: 0;
   max-width: 760px;
 }
 
 .cv-actions {
-  margin: 26px 0 0;
+  margin: 18px 0 0;
 }
 
 .cv-actions .cv-action-secondary {
@@ -920,7 +920,7 @@ img {
 }
 
 .cv-facts div {
-  padding: 22px;
+  padding: 16px;
 }
 
 .cv-facts div:nth-child(odd) {
@@ -939,7 +939,7 @@ img {
 }
 
 .cv-facts dd {
-  font-size: 1.08rem;
+  font-size: 1rem;
   font-weight: 800;
   margin: 5px 0 0;
 }
@@ -947,9 +947,9 @@ img {
 .cv-section {
   border-top: 1px solid var(--line);
   display: grid;
-  gap: 52px;
-  grid-template-columns: 210px minmax(0, 1fr);
-  padding: 52px 0 58px;
+  gap: 34px;
+  grid-template-columns: 185px minmax(0, 1fr);
+  padding: 34px 0 40px;
 }
 
 .cv-section-title h2 {
@@ -959,27 +959,55 @@ img {
 }
 
 .cv-section-title .eyebrow {
-  margin-bottom: 10px;
+  margin-bottom: 6px;
 }
 
 .cv-entry + .cv-entry {
   border-top: 1px solid var(--line);
-  margin-top: 32px;
-  padding-top: 32px;
+  margin-top: 22px;
+  padding-top: 22px;
 }
 
 .cv-entry-featured {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 12px;
-  padding: 28px;
+  padding: 20px;
 }
 
 .cv-entry-head {
   align-items: flex-start;
   display: flex;
-  gap: 24px;
+  gap: 16px;
   justify-content: space-between;
+}
+
+.cv-institution {
+  align-items: center;
+  display: flex;
+  gap: 13px;
+  min-width: 0;
+}
+
+.cv-institution-logo {
+  background: #fff;
+  flex: 0 0 auto;
+  height: 52px;
+  object-fit: contain;
+  width: 52px;
+}
+
+.cv-institution-logo-sjtu {
+  border-radius: 50%;
+}
+
+.cv-institution-logo-stanford {
+  height: 44px;
+  width: 104px;
+}
+
+.cv-institution-logo-lin-gang {
+  border-radius: 6px;
 }
 
 .cv-entry h3,
@@ -994,7 +1022,7 @@ img {
 .cv-role {
   color: var(--accent);
   font-weight: 760;
-  margin: 5px 0 0;
+  margin: 3px 0 0;
 }
 
 .cv-date {
@@ -1008,7 +1036,7 @@ img {
 
 .cv-entry > p:not(.cv-role):not(.cv-date) {
   color: var(--muted);
-  margin: 14px 0 0;
+  margin: 9px 0 0;
 }
 
 .cv-entry a,
@@ -1020,8 +1048,8 @@ img {
 .cv-tag-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 20px;
+  gap: 6px;
+  margin-top: 13px;
 }
 
 .cv-tag-row span {
@@ -1030,18 +1058,18 @@ img {
   border-radius: 999px;
   font-size: 0.8rem;
   font-weight: 740;
-  padding: 5px 10px;
+  padding: 4px 9px;
 }
 
 .cv-list {
   color: var(--muted);
-  margin: 16px 0 0;
+  margin: 10px 0 0;
   padding-left: 20px;
 }
 
 .cv-project-grid {
   display: grid;
-  gap: 16px;
+  gap: 12px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
@@ -1050,8 +1078,8 @@ img {
   border-radius: 10px;
   display: flex;
   flex-direction: column;
-  min-height: 245px;
-  padding: 24px;
+  min-height: 190px;
+  padding: 18px;
   transition: border-color 180ms ease, transform 180ms ease;
 }
 
@@ -1062,7 +1090,7 @@ img {
 
 .cv-project p:not(.eyebrow) {
   color: var(--muted);
-  margin: 12px 0 20px;
+  margin: 8px 0 14px;
 }
 
 .cv-project span {
@@ -1073,14 +1101,14 @@ img {
 
 .cv-publication {
   display: grid;
-  gap: 18px;
+  gap: 12px;
   grid-template-columns: 34px minmax(0, 1fr);
 }
 
 .cv-publication + .cv-publication {
   border-top: 1px solid var(--line);
-  margin-top: 24px;
-  padding-top: 24px;
+  margin-top: 16px;
+  padding-top: 16px;
 }
 
 .cv-publication-index {
@@ -1092,7 +1120,7 @@ img {
 
 .cv-publication p {
   color: var(--muted);
-  margin: 8px 0 6px;
+  margin: 6px 0 4px;
 }
 
 .cv-honors {
@@ -1106,7 +1134,7 @@ img {
   display: grid;
   gap: 8px 18px;
   grid-template-columns: 52px minmax(160px, 0.55fr) minmax(0, 1fr);
-  padding: 15px 0;
+  padding: 10px 0;
 }
 
 .cv-honors li + li {
@@ -1126,7 +1154,7 @@ img {
 
 .cv-skill-groups {
   display: grid;
-  gap: 28px 34px;
+  gap: 18px 24px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
@@ -1139,8 +1167,8 @@ img {
   background: var(--text);
   border-radius: 12px;
   color: white;
-  margin: 6px 0 74px;
-  padding: 48px;
+  margin: 6px 0 50px;
+  padding: 32px;
 }
 
 .cv-contact h2 {
@@ -1152,14 +1180,14 @@ img {
 
 .cv-contact > p:not(.eyebrow) {
   color: #cfcfca;
-  margin: 16px 0 0;
+  margin: 12px 0 0;
   max-width: 680px;
 }
 
 .cv-contact .button {
   background: white;
   color: var(--text);
-  margin-top: 24px;
+  margin-top: 18px;
 }
 
 .footer-gallery {

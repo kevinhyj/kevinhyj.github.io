@@ -3,7 +3,7 @@ title: "EVA"
 subtitle: "A long-context generative RNA foundation model for universal modeling and controllable design."
 kind: "Genomic Foundation Model"
 year: "2026"
-role: "Team leader / co-first author"
+role: "Team leader / first author"
 status: "Nature Machine Intelligence, under revision"
 order: 1
 image: "/assets/works/eva/cover.png"

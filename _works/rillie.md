@@ -3,7 +3,7 @@ title: "RILLIE"
 subtitle: "Capturing natural evolution in function-guided RNA design via genomic foundation models."
 kind: "Genomic Foundation Model"
 year: "2025"
-role: "Team leader / co-first author"
+role: "Team leader / first author"
 status: "Preprint"
 order: 3
 image: "/assets/works/rillie/rillie-fluorescent-aptamer-cover.png"

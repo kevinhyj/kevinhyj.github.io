@@ -117,7 +117,7 @@ description: "Academic background, research experience, publications, and techni
           <a class="cv-project" href="{{ '/work/eva/' | relative_url }}">
             <p class="eyebrow">RNA foundation model</p>
             <h3>EVA</h3>
-            <p>Team leader and co-first author. Designed a 1.4B-parameter long-context MoE model for universal RNA modeling and controllable design.</p>
+            <p>Team leader and first author. Designed a 1.4B-parameter long-context MoE model for universal RNA modeling and controllable design.</p>
             <span>View project →</span>
           </a>
           <a class="cv-project" href="{{ '/work/phaseflow/' | relative_url }}">

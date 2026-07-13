@@ -29,7 +29,7 @@ description: "Academic background, research experience, publications, and techni
         </div>
         <div>
           <dt>GPA</dt>
-          <dd>4.18 / 4.30</dd>
+          <dd>3.98 / 4.30</dd>
         </div>
         <div>
           <dt>Focus</dt>
@@ -55,7 +55,7 @@ description: "Academic background, research experience, publications, and techni
             </div>
             <p class="cv-date">Sep 2023 – Jun 2027</p>
           </div>
-          <p>GPA: <strong>4.18 / 4.30</strong> · Shanghai, China</p>
+          <p>GPA: <strong>3.98 / 4.30</strong> · Shanghai, China</p>
           <p>Selected for the Bolè Plan (Elite Scientific Talent Program) as one of 30 students from 18,584 undergraduates, recognizing exceptional scientific potential and dedication.</p>
         </article>
       </div>

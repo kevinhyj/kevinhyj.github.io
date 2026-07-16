@@ -13,7 +13,8 @@
     <header class="site-header">
       <div class="container">
         <a class="site-logo" href="{{ '/' | relative_url }}" aria-label="{{ settings.title }} home">
-          {{ settings.title | default: site.title }}
+          <span>{{ settings.title | default: site.title }}</span>
+          <span class="site-logo-secondary">{{ settings.author.name_zh }}</span>
         </a>
 
         <nav class="site-nav" aria-label="Main navigation">
@@ -54,7 +55,7 @@
             <img src="{{ settings.author.avatar | relative_url }}" alt="{{ settings.author.name }}">
           {% endif %}
           <div>
-            <h3>{{ settings.author.name }}</h3>
+            <h3>{{ settings.author.name }} <span class="footer-author-cn">{{ settings.author.name_zh }}</span></h3>
             <p>{{ settings.author.bio }}</p>
           </div>
         </div>

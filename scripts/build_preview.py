@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "_site"
 
 SITE_TITLE = "Yanjie Huang"
+AUTHOR_NAME_ZH = "黄䶮杰"
 SITE_DESC = "AI4Bio, photos, projects, and small field notes."
 EMAIL = "huangyanjie@sjtu.edu.cn"
 GITHUB = "https://github.com/kevinhyj"
@@ -167,7 +168,7 @@ def default_layout(title: str, body: str, description: str = "") -> str:
   <body>
     <header class="site-header">
       <div class="container">
-        <a class="site-logo" href="/" aria-label="Yanjie Huang home">Yanjie Huang</a>
+        <a class="site-logo" href="/" aria-label="Yanjie Huang home"><span>Yanjie Huang</span><span class="site-logo-secondary">{AUTHOR_NAME_ZH}</span></a>
         <nav class="site-nav" aria-label="Main navigation">
           <a href="/">Home</a>
           <a href="/projects/">Projects</a>
@@ -190,7 +191,7 @@ def default_layout(title: str, body: str, description: str = "") -> str:
         <div class="footer-author">
           <img src="{AUTHOR_IMAGE}" alt="Yanjie Huang">
           <div>
-            <h3>Yanjie Huang</h3>
+            <h3>Yanjie Huang <span class="footer-author-cn">{AUTHOR_NAME_ZH}</span></h3>
             <p>{AUTHOR_BIO}</p>
           </div>
         </div>

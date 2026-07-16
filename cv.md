@@ -10,6 +10,7 @@ description: "Academic background, research experience, publications, and techni
   <div class="container">
     <div class="cv-profile">
       <div class="cv-profile-copy">
+        <p class="cv-name-line">Yanjie Huang <span>黄䶮杰</span></p>
         <p class="cv-lead">I am an undergraduate researcher at Shanghai Jiao Tong University. My research lies at the intersection of generative AI and scientific discovery, with a focus on reasoning, alignment and molecular design.</p>
         <div class="resource-links cv-actions">
           <a href="mailto:huangyanjie@sjtu.edu.cn">Email me</a>

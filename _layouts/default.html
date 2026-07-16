@@ -135,7 +135,7 @@
     {% if settings.gallery %}
       <section class="footer-gallery" aria-label="Photo gallery">
         {% for image in settings.gallery %}
-          <img src="{{ image.url | relative_url }}" alt="{{ image.alt }}">
+          {% include responsive-photo.html src=image.url alt=image.alt sizes="(max-width: 560px) 100vw, (max-width: 900px) 50vw, 25vw" %}
         {% endfor %}
       </section>
     {% endif %}
@@ -144,7 +144,7 @@
       <div class="container footer-grid">
         <div class="footer-author">
           {% if settings.author.avatar %}
-            <img src="{{ settings.author.avatar | relative_url }}" alt="{{ settings.author.name }}">
+            {% include responsive-photo.html src=settings.author.avatar alt=settings.author.name sizes="72px" %}
           {% endif %}
           <div>
             <h3>{{ settings.author.name }} <span class="footer-author-cn">{{ settings.author.name_zh }}</span></h3>

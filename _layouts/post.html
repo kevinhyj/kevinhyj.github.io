@@ -45,7 +45,7 @@ layout: default
         {% endif %}
       </div>
     {% elsif page.image %}
-      <img class="post-image" src="{{ page.image | relative_url }}" alt="{{ page.title }}">
+      {% include responsive-photo.html src=page.image alt=page.title class="post-image" sizes="(max-width: 960px) 100vw, 920px" fetchpriority="high" %}
     {% endif %}
 
     <div class="post-content">
@@ -55,7 +55,7 @@ layout: default
     {% if page.gallery %}
       <div class="instagram-grid">
         {% for item in page.gallery %}
-          <img class="{{ item.class }}" src="{{ item.src | relative_url }}" alt="{{ item.alt }}">
+          {% include responsive-photo.html src=item.src alt=item.alt picture_class=item.class sizes="(max-width: 560px) 100vw, 50vw" %}
         {% endfor %}
       </div>
     {% endif %}
@@ -70,7 +70,7 @@ layout: default
       <div class="post-card-grid">
         {% for post in related_posts limit:3 %}
           <a class="post-card" href="{{ post.url | relative_url }}">
-            {% if post.image %}<img src="{{ post.image | relative_url }}" alt="{{ post.title }} cover">{% endif %}
+            {% if post.image %}{% include responsive-photo.html src=post.image alt=post.title sizes="(max-width: 560px) 100vw, (max-width: 900px) 50vw, 33vw" %}{% endif %}
             <div>
               <p class="post-card-tags">{{ post.tags | join: " / " }}</p>
               <h3>{{ post.title }}</h3>

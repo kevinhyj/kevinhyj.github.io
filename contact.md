@@ -9,7 +9,7 @@ description: "Contact Yanjie Huang (黄䶮杰), an undergraduate researcher at S
 <section class="section page-section">
   <div class="container">
     <div class="contact-layout">
-      <img src="{{ '/assets/shared/portraits/home-window.jpeg' | relative_url }}" alt="Yanjie Huang">
+      {% include responsive-photo.html src="/assets/shared/portraits/home-window.jpeg" alt="Yanjie Huang" sizes="(max-width: 900px) 100vw, 48vw" %}
       <div class="contact-copy">
         <p class="eyebrow">PhD applications · research collaborations · research engineering</p>
         <h2>Let’s talk about models for living systems.</h2>

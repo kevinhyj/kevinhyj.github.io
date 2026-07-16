@@ -23,12 +23,12 @@ hide_title: true
 
     <div class="cat-board">
       <figure class="cat-card cat-card-wide">
-        <img src="{{ '/assets/cat/pixie/maine-coon-cafe.jpg' | relative_url }}" alt="Maine Coon at a cat cafe">
+        {% include responsive-photo.html src="/assets/cat/pixie/maine-coon-cafe.jpg" alt="Maine Coon at a cat cafe" sizes="(max-width: 900px) 100vw, 56vw" %}
         <figcaption><span>Maine Coon</span> serious face, enormous tail, very strong candidate energy.</figcaption>
       </figure>
 
       <figure class="cat-card cat-card-tall">
-        <img src="{{ '/assets/cat/pixie/ragdoll-cafe.jpg' | relative_url }}" alt="Ragdoll cat at a cat cafe">
+        {% include responsive-photo.html src="/assets/cat/pixie/ragdoll-cafe.jpg" alt="Ragdoll cat at a cat cafe" sizes="(max-width: 900px) 100vw, 44vw" %}
         <figcaption><span>Ragdoll</span> blue eyes, soft chaos, also very strong candidate energy.</figcaption>
       </figure>
     </div>
@@ -41,7 +41,7 @@ hide_title: true
       </div>
 
       <div class="cat-memory-feature">
-        <img src="{{ '/assets/cat/memories/lai-fu.jpg' | relative_url }}" alt="Lai Fu, the first rescued family cat">
+        {% include responsive-photo.html src="/assets/cat/memories/lai-fu.jpg" alt="Lai Fu, the first rescued family cat" sizes="(max-width: 900px) 100vw, 48vw" %}
         <div class="cat-memory-copy">
           <p class="eyebrow">Lai Fu · 来福</p>
           <h3>Lai Fu (来福), which honestly sounds like a dog name.</h3>
@@ -59,19 +59,19 @@ hide_title: true
 
         <div class="cat-litter-gallery">
           <figure class="wide">
-            <img src="{{ '/assets/cat/memories/xiao-maqiu-kittens.jpg' | relative_url }}" alt="Rescued winter kittens resting together">
+            {% include responsive-photo.html src="/assets/cat/memories/xiao-maqiu-kittens.jpg" alt="Rescued winter kittens resting together" sizes="(max-width: 560px) 100vw, 50vw" %}
             <figcaption>the winter litter</figcaption>
           </figure>
           <figure class="wide">
-            <img src="{{ '/assets/cat/memories/xiao-maqiu-white.jpg' | relative_url }}" alt="The white kitten originally named Xiao Maqiu">
+            {% include responsive-photo.html src="/assets/cat/memories/xiao-maqiu-white.jpg" alt="The white kitten originally named Xiao Maqiu" sizes="(max-width: 560px) 100vw, 50vw" %}
             <figcaption>the first Xiao Maqiu · 小麻球</figcaption>
           </figure>
           <figure class="portrait">
-            <img src="{{ '/assets/cat/memories/xiao-maqiu-black-chair.jpg' | relative_url }}" alt="The black kitten sitting on a chair">
+            {% include responsive-photo.html src="/assets/cat/memories/xiao-maqiu-black-chair.jpg" alt="The black kitten sitting on a chair" sizes="(max-width: 560px) 100vw, 50vw" %}
             <figcaption>the brother who inherited the name</figcaption>
           </figure>
           <figure class="wide">
-            <img src="{{ '/assets/cat/memories/xiao-maqiu-black-bed.jpg' | relative_url }}" alt="The black cat resting in a cat bed near a cage">
+            {% include responsive-photo.html src="/assets/cat/memories/xiao-maqiu-black-bed.jpg" alt="The black cat resting in a cat bed near a cage" sizes="(max-width: 560px) 100vw, 50vw" %}
             <figcaption>Xiao Maqiu · 小麻球, as it should be</figcaption>
           </figure>
         </div>

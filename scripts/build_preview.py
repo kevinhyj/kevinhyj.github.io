@@ -139,6 +139,11 @@ def markdown_to_html(markdown: str) -> str:
 def render_liquid_paths(text: str) -> str:
     text = re.sub(r"\{\{\s*'([^']+)'\s*\|\s*relative_url\s*\}\}", r"\1", text)
     text = re.sub(r'\{\{\s*"([^"]+)"\s*\|\s*relative_url\s*\}\}', r"\1", text)
+    text = re.sub(
+        r'\{%\s*include\s+responsive-photo\.html\s+src="(?P<src>[^"]+)"\s+alt="(?P<alt>[^"]+)"(?:\s+sizes="(?P<sizes>[^"]+)")?\s*%\}',
+        lambda match: photo_picture(match["src"], match["alt"], match["sizes"] or "100vw"),
+        text,
+    )
     return text
 
 
@@ -165,6 +170,29 @@ def long_display_date(value: str) -> str:
 def datetime_value(value: str) -> str:
     parsed = parse_date(value)
     return parsed.isoformat() if parsed else str(value)
+
+
+def responsive_webp_path(source: str, width: int) -> str:
+    return f"{source.rsplit('.', 1)[0]}-{width}.webp"
+
+
+def photo_picture(source: str, alt: str, sizes: str = "100vw", class_name: str = "", picture_class: str = "", fetchpriority: str = "") -> str:
+    attributes = []
+    if picture_class:
+        attributes.append(f' class="{html.escape(picture_class, quote=True)}"')
+    image_class = f' class="{html.escape(class_name, quote=True)}"' if class_name else ""
+    priority = f' fetchpriority="{html.escape(fetchpriority, quote=True)}"' if fetchpriority else ""
+    return f'''<picture{''.join(attributes)}>
+  <source type="image/webp" srcset="{responsive_webp_path(source, 640)} 640w, {responsive_webp_path(source, 1280)} 1280w" sizes="{html.escape(sizes, quote=True)}">
+  <img{image_class} src="{source}" alt="{html.escape(alt, quote=True)}"{priority} decoding="async">
+</picture>'''
+
+
+def project_card_picture(source: str, alt: str) -> str:
+    return f'''<picture>
+  <source type="image/webp" srcset="{responsive_webp_path(source, 480)} 480w, {responsive_webp_path(source, 960)} 960w" sizes="(max-width: 560px) 100vw, (max-width: 900px) 50vw, 33vw">
+  <img src="{source}" alt="{html.escape(alt, quote=True)}" decoding="async">
+</picture>'''
 
 
 def default_layout(title: str, body: str, description: str = "", path: str = "/", robots: str = DEFAULT_ROBOTS) -> str:
@@ -228,7 +256,7 @@ def default_layout(title: str, body: str, description: str = "", path: str = "/"
     )
     escaped_title = html.escape(page_title, quote=True)
     escaped_desc = html.escape(desc, quote=True)
-    gallery = "\n".join(f'<img src="{src}" alt="{html.escape(alt)}">' for src, alt in GALLERY)
+    gallery = "\n".join(photo_picture(src, alt, "(max-width: 560px) 100vw, (max-width: 900px) 50vw, 25vw") for src, alt in GALLERY)
     return f"""<!doctype html>
 <html lang="en">
   <head>
@@ -281,7 +309,7 @@ def default_layout(title: str, body: str, description: str = "", path: str = "/"
     <footer class="site-footer">
       <div class="container footer-grid">
         <div class="footer-author">
-          <img src="{AUTHOR_IMAGE}" alt="Yanjie Huang">
+          {photo_picture(AUTHOR_IMAGE, "Yanjie Huang", "72px")}
           <div>
             <h3>Yanjie Huang <span class="footer-author-cn">{AUTHOR_NAME_ZH}</span></h3>
             <p>{AUTHOR_BIO}</p>
@@ -345,7 +373,7 @@ def load_posts():
 
 def project_card(work, heading="h3") -> str:
     status = '<span class="project-status">In progress</span>' if work.get("status") == "In progress" else ""
-    image = f'<img src="{work["image"]}" alt="{html.escape(work["title"])} visual">' if work.get("image") else f'<div class="project-placeholder" role="img" aria-label="{html.escape(work["title"])} image coming soon">?</div>'
+    image = project_card_picture(work["image"], f'{work["title"]} visual') if work.get("image") else f'<div class="project-placeholder" role="img" aria-label="{html.escape(work["title"])} image coming soon">?</div>'
     return f"""<a class="project-card project-card-{work['slug']}" href="{work['url']}">
   {image}
   <div class="card-content">
@@ -359,7 +387,7 @@ def project_card(work, heading="h3") -> str:
 def post_card(post) -> str:
     tags = " / ".join(post.get("tags", []))
     return f"""<a class="post-card" href="{post['url']}">
-  <img src="{post.get('image', '/assets/shared/gallery/gallery-life.png')}" alt="{html.escape(post['title'])} cover">
+  {photo_picture(post.get('image', '/assets/shared/gallery/gallery-life.png'), f'{post["title"]} cover', "(max-width: 560px) 100vw, (max-width: 900px) 50vw, 33vw")}
   <div>
     <p class="post-card-tags">{html.escape(tags)}</p>
     <h3>{html.escape(post['title'])}</h3>
@@ -386,7 +414,7 @@ def build_home(works, posts):
   <div class="container">
     <div class="hero-inner">
       <div class="hero-image">
-        <img src="{HERO_IMAGE}" alt="Yanjie Huang by a winter window">
+        {photo_picture(HERO_IMAGE, "Yanjie Huang by a winter window", "(max-width: 900px) 100vw, 42vw", fetchpriority="high")}
       </div>
       <div class="hero-copy">
         <h1>I'm Yanjie. What do I do for a living? I dream.</h1>
@@ -500,13 +528,13 @@ def build_posts(posts):
         if is_instagram:
             body += '<div class="instagram-sound-panel"><span class="instagram-source-link">Photo archive</span></div>'
         elif post.get("image"):
-            body += f'<img class="post-image" src="{post["image"]}" alt="{html.escape(post["title"])}">'
+            body += photo_picture(post["image"], post["title"], "(max-width: 960px) 100vw, 920px", class_name="post-image", fetchpriority="high")
         body += f'<div class="post-content">{render_liquid_paths(post["body"])}</div>'
         if post.get("gallery"):
             body += '<div class="instagram-grid">'
             for image in post["gallery"]:
                 klass = html.escape(image.get("class", ""))
-                body += f'<img class="{klass}" src="{image["src"]}" alt="{html.escape(image["alt"])}">'
+                body += photo_picture(image["src"], image["alt"], "(max-width: 560px) 100vw, 50vw", picture_class=klass)
             body += "</div>"
         body += "</div></article>"
         write_page(post["url"], post["title"], body, post.get("excerpt", ""))

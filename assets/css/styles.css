@@ -149,6 +149,19 @@ img {
   width: 100%;
 }
 
+.hero-image picture,
+.project-card picture,
+.post-card picture,
+.footer-gallery picture,
+.contact-layout > picture,
+.cat-card picture,
+.cat-memory-feature > picture,
+.cat-litter-gallery picture,
+.instagram-grid picture {
+  display: block;
+  width: 100%;
+}
+
 .hero-copy h1 {
   font-size: 4.7rem;
   font-weight: 850;
@@ -560,6 +573,7 @@ img {
 .instagram-grid img {
   aspect-ratio: 1 / 1;
   border-radius: 8px;
+  height: 100%;
   object-fit: cover;
   width: 100%;
 }
@@ -754,11 +768,17 @@ img {
   margin-bottom: 54px;
 }
 
-.cat-memory-feature > img {
+.cat-memory-feature > img,
+.cat-memory-feature > picture {
   aspect-ratio: 1 / 1;
   border-radius: 8px;
-  object-fit: cover;
+  overflow: hidden;
   width: 100%;
+}
+
+.cat-memory-feature > picture img {
+  height: 100%;
+  object-fit: cover;
 }
 
 .cat-memory-copy h3,
@@ -809,8 +829,21 @@ img {
   margin-top: 8px;
 }
 
-.contact-layout > img {
+.contact-layout > img,
+.contact-layout > picture {
+  border-radius: 8px;
+  object-fit: cover;
+  width: 100%;
+}
+
+.contact-layout > picture {
   aspect-ratio: 4 / 3;
+  overflow: hidden;
+}
+
+.contact-layout > picture img {
+  height: 100%;
+  object-fit: cover;
 }
 
 .contact-copy h2 {
@@ -1241,6 +1274,11 @@ img {
   align-items: center;
   display: flex;
   gap: 18px;
+}
+
+.footer-author picture {
+  display: block;
+  flex: 0 0 72px;
 }
 
 .footer-author img {

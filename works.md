@@ -12,7 +12,7 @@ subtitle: "AI4Bio systems, generative models, and scientific agents."
       {% for work in sorted_works %}
         {% unless work.hidden %}
           <a class="project-card project-card-{{ work.slug }}" href="{{ work.url | relative_url }}">
-            {% if work.image %}<img src="{{ work.image | relative_url }}" alt="{{ work.title }} visual">{% elsif work.status == "In progress" %}<div class="project-placeholder" role="img" aria-label="{{ work.title }} image coming soon">?</div>{% endif %}
+            {% if work.image %}{% include project-card-image.html src=work.image alt=work.title %}{% elsif work.status == "In progress" %}<div class="project-placeholder" role="img" aria-label="{{ work.title }} image coming soon">?</div>{% endif %}
             <div class="card-content">
               <p>{{ work.kind }}{% if work.status == "In progress" %}<span class="project-status">In progress</span>{% endif %}</p>
               <h3>{{ work.title }}</h3>

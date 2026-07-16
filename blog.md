@@ -13,7 +13,7 @@ description: "Research notes, photography, and field observations by Yanjie Huan
       <div class="post-card-grid blog-grid">
         {% for post in published_posts %}
           <a class="post-card" href="{{ post.url | relative_url }}">
-            {% if post.image %}<img src="{{ post.image | relative_url }}" alt="{{ post.title }} cover">{% endif %}
+            {% if post.image %}{% include responsive-photo.html src=post.image alt=post.title sizes="(max-width: 560px) 100vw, (max-width: 900px) 50vw, 33vw" %}{% endif %}
             <div>
               <p class="post-card-tags">{{ post.tags | join: " / " }}</p>
               <h3>{{ post.title }}</h3>

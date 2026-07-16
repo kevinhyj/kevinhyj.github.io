@@ -10,7 +10,8 @@ description: "Yanjie Huang (黄䶮杰) is an undergraduate researcher at Shangha
   <div class="container">
     <div class="hero-inner">
       <div class="hero-image">
-        <img src="{{ settings.hero.image | relative_url }}" alt="{{ settings.author.name }}'s picture">
+        {% capture hero_alt %}{{ settings.author.name }}'s picture{% endcapture %}
+        {% include responsive-photo.html src=settings.hero.image alt=hero_alt sizes="(max-width: 900px) 100vw, 42vw" fetchpriority="high" %}
       </div>
       <div class="hero-copy">
         <h1>{{ settings.hero.title }}</h1>
@@ -37,7 +38,7 @@ description: "Yanjie Huang (黄䶮杰) is an undergraduate researcher at Shangha
       {% for work in sorted_works limit:6 %}
         {% unless work.hidden %}
           <a class="project-card project-card-{{ work.slug }}" href="{{ work.url | relative_url }}">
-            {% if work.image %}<img src="{{ work.image | relative_url }}" alt="{{ work.title }} visual">{% elsif work.status == "In progress" %}<div class="project-placeholder" role="img" aria-label="{{ work.title }} image coming soon">?</div>{% endif %}
+            {% if work.image %}{% include project-card-image.html src=work.image alt=work.title %}{% elsif work.status == "In progress" %}<div class="project-placeholder" role="img" aria-label="{{ work.title }} image coming soon">?</div>{% endif %}
             <div class="card-content">
               <p>{{ work.kind }}{% if work.status == "In progress" %}<span class="project-status">In progress</span>{% endif %}</p>
               <h3>{{ work.title }}</h3>
@@ -64,7 +65,7 @@ description: "Yanjie Huang (黄䶮杰) is an undergraduate researcher at Shangha
       {% assign recent_posts = site.posts | sort: "date" | reverse %}
       {% for post in recent_posts limit:3 %}
         <a class="post-card" href="{{ post.url | relative_url }}">
-          {% if post.image %}<img src="{{ post.image | relative_url }}" alt="{{ post.title }} cover">{% endif %}
+          {% if post.image %}{% include responsive-photo.html src=post.image alt=post.title sizes="(max-width: 560px) 100vw, (max-width: 900px) 50vw, 33vw" %}{% endif %}
           <div>
             <p class="post-card-tags">{{ post.tags | join: " / " }}</p>
             <h3>{{ post.title }}</h3>

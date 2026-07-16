@@ -2,7 +2,6 @@
 title: Academic CV
 permalink: /cv/
 eyebrow: Curriculum vitae
-subtitle: "Undergraduate researcher working on biological reasoning models, molecular foundation models, diffusion, and post-training."
 description: "Academic CV of Yanjie Huang (黄䶮杰), an undergraduate researcher at Shanghai Jiao Tong University: education, research experience, selected publications, and projects in AI and AI for Bio."
 ---
 

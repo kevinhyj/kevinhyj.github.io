@@ -336,11 +336,12 @@ def default_layout(title: str, body: str, description: str = "", path: str = "/"
 
 
 def page_head(title: str, eyebrow: str, subtitle: str) -> str:
+    subtitle_html = f"\n    <p>{html.escape(subtitle)}</p>" if subtitle else ""
     return f"""<section class="page-head">
   <div class="container">
     <p class="eyebrow">{html.escape(eyebrow)}</p>
     <h1>{html.escape(title)}</h1>
-    <p>{html.escape(subtitle)}</p>
+{subtitle_html}
   </div>
 </section>"""
 

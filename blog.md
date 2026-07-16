@@ -3,6 +3,7 @@ title: Blog
 permalink: /blog/
 eyebrow: Blog
 subtitle: "Photo notes, research fragments, and a little everyday life."
+description: "Research notes, photography, and field observations by Yanjie Huang (黄䶮杰)."
 ---
 
 <section class="section page-section">

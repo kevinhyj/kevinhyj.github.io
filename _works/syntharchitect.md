@@ -6,6 +6,8 @@ year: "2026"
 role: "Builder"
 status: "In progress"
 hidden: true
+sitemap: false
+robots: "noindex,nofollow"
 order: 7
 image: "/assets/works/syntharchitect/cover.png"
 tags:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import html
+import json
 import re
 import shutil
 from datetime import datetime
@@ -11,13 +12,28 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "_site"
 
 SITE_TITLE = "Yanjie Huang"
+SITE_URL = "https://kevinhyj.github.io"
+HOME_TITLE = "Yanjie Huang 黄䶮杰 | AI for Bio Researcher at Shanghai Jiao Tong University"
 AUTHOR_NAME_ZH = "黄䶮杰"
 SITE_DESC = "AI4Bio, photos, projects, and small field notes."
+HOME_DESC = "Yanjie Huang (黄䶮杰) is an undergraduate researcher at Shanghai Jiao Tong University working on AI and AI for Bio, including biological reasoning, molecular foundation models, diffusion, post-training, and molecular design."
+PROJECTS_DESC = "Research projects and publications by Yanjie Huang (黄䶮杰) in AI and AI for Bio, including biological reasoning, generative models, and molecular design."
+DEFAULT_ROBOTS = "index,follow,max-image-preview:large"
+GOOGLE_SITE_VERIFICATION = ""
 EMAIL = "huangyanjie@sjtu.edu.cn"
 GITHUB = "https://github.com/kevinhyj"
 AUTHOR_IMAGE = "/assets/shared/portraits/home-window.jpeg"
 HERO_IMAGE = "/assets/shared/portraits/home-window.jpeg"
 AUTHOR_BIO = "AI4Bio, foundation models, snow, notes, and Pixie someday."
+RESEARCH_INTERESTS = [
+    "AI",
+    "AI for Bio",
+    "Biological reasoning models",
+    "Molecular foundation models",
+    "Diffusion models",
+    "Post-training",
+    "Molecular design",
+]
 GALLERY = [
     ("/assets/posts/2026-04-23-keketuohai-skiing/07-tanboer-slope.jpg", "Keketuohai snowboarding blog cover"),
     ("/assets/posts/2025-02-21-hokkaido-junk/00-otaru-snow-night.jpg", "Hokkaido blog cover"),
@@ -151,17 +167,93 @@ def datetime_value(value: str) -> str:
     return parsed.isoformat() if parsed else str(value)
 
 
-def default_layout(title: str, body: str, description: str = "") -> str:
-    page_title = SITE_TITLE if title == "Home" else f"{html.escape(title)} | {SITE_TITLE}"
-    desc = html.escape(description or SITE_DESC)
+def default_layout(title: str, body: str, description: str = "", path: str = "/", robots: str = DEFAULT_ROBOTS) -> str:
+    page_title = HOME_TITLE if path == "/" else f"{title} | {SITE_TITLE} {AUTHOR_NAME_ZH}"
+    desc = description or SITE_DESC
+    canonical = f"{SITE_URL}{path}"
+    image = f"{SITE_URL}{AUTHOR_IMAGE}"
+    page_type = "article" if path.startswith("/blog/") and path != "/blog/" else "website"
+    person_id = f"{SITE_URL}/#person"
+    website_id = f"{SITE_URL}/#website"
+    graph = []
+    if path in {"/", "/cv/"}:
+        graph.append(
+            {
+                "@type": "Person",
+                "@id": person_id,
+                "name": SITE_TITLE,
+                "alternateName": AUTHOR_NAME_ZH,
+                "url": SITE_URL,
+                "email": EMAIL,
+                "image": image,
+                "jobTitle": "Undergraduate Researcher",
+                "affiliation": {
+                    "@type": "CollegeOrUniversity",
+                    "name": "Shanghai Jiao Tong University",
+                    "url": "https://www.sjtu.edu.cn/",
+                },
+                "knowsAbout": RESEARCH_INTERESTS,
+                "sameAs": [GITHUB],
+            }
+        )
+    if path == "/":
+        graph.append(
+            {
+                "@type": "WebSite",
+                "@id": website_id,
+                "url": SITE_URL,
+                "name": SITE_TITLE,
+                "alternateName": AUTHOR_NAME_ZH,
+                "publisher": {"@id": person_id},
+            }
+        )
+    graph.append(
+        {
+            "@type": "WebPage",
+            "@id": f"{canonical}#webpage",
+            "url": canonical,
+            "name": page_title,
+            "description": desc,
+            "author": {"@id": person_id},
+            "about": {"@id": person_id},
+            "isPartOf": {"@id": website_id},
+            "inLanguage": "en",
+        }
+    )
+    structured_data = json.dumps({"@context": "https://schema.org", "@graph": graph}, ensure_ascii=False, indent=2)
+    verification_tag = (
+        f'    <meta name="google-site-verification" content="{html.escape(GOOGLE_SITE_VERIFICATION, quote=True)}">\n'
+        if GOOGLE_SITE_VERIFICATION
+        else ""
+    )
+    escaped_title = html.escape(page_title, quote=True)
+    escaped_desc = html.escape(desc, quote=True)
     gallery = "\n".join(f'<img src="{src}" alt="{html.escape(alt)}">' for src, alt in GALLERY)
     return f"""<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{page_title}</title>
-    <meta name="description" content="{desc}">
+    <title>{escaped_title}</title>
+    <meta name="description" content="{escaped_desc}">
+    <meta name="robots" content="{html.escape(robots, quote=True)}">
+    <link rel="canonical" href="{canonical}">
+{verification_tag}    <meta property="og:type" content="{page_type}">
+    <meta property="og:site_name" content="Yanjie Huang 黄䶮杰">
+    <meta property="og:locale" content="en_US">
+    <meta property="og:title" content="{escaped_title}">
+    <meta property="og:description" content="{escaped_desc}">
+    <meta property="og:url" content="{canonical}">
+    <meta property="og:image" content="{image}">
+    <meta property="og:image:alt" content="Portrait of Yanjie Huang">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="{escaped_title}">
+    <meta name="twitter:description" content="{escaped_desc}">
+    <meta name="twitter:image" content="{image}">
+    <meta name="twitter:image:alt" content="Portrait of Yanjie Huang">
+    <script type="application/ld+json">
+{structured_data}
+    </script>
     <link rel="icon" href="/assets/shared/icons/favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="/assets/css/styles.css">
   </head>
@@ -276,7 +368,7 @@ def post_card(post) -> str:
 </a>"""
 
 
-def write_page(path: str, title: str, body: str, description: str = ""):
+def write_page(path: str, title: str, body: str, description: str = "", robots: str = DEFAULT_ROBOTS):
     if path == "/":
         target = OUT / "index.html"
     elif path.endswith(".html"):
@@ -284,7 +376,7 @@ def write_page(path: str, title: str, body: str, description: str = ""):
     else:
         target = OUT / path.strip("/") / "index.html"
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(default_layout(title, body, description), encoding="utf-8")
+    target.write_text(default_layout(title, body, description, path, robots), encoding="utf-8")
 
 
 def build_home(works, posts):
@@ -323,7 +415,7 @@ def build_home(works, posts):
     <div class="post-card-grid">{post_cards}</div>
   </div>
 </section>"""
-    write_page("/", "Home", body)
+    write_page("/", "Home", body, HOME_DESC)
 
 
 def build_works(works):
@@ -334,7 +426,7 @@ def build_works(works):
     <div class="project-grid all-projects">{cards}</div>
   </div>
 </section>"""
-    write_page("/projects/", "Projects", body)
+    write_page("/projects/", "Projects", body, PROJECTS_DESC)
 
     for work in works:
         links = ""
@@ -370,7 +462,7 @@ def build_works(works):
     </div>
   </div>
 </article>"""
-        write_page(work["url"], work["title"], body)
+        write_page(work["url"], work["title"], body, work.get("description", work.get("subtitle", "")))
 
 
 def build_blog(posts):
@@ -381,7 +473,7 @@ def build_blog(posts):
         body += "</div></div></section>"
     else:
         body += '<section class="section page-section"><div class="container"><div class="empty-state"><h2>The notebook is open, but the ink is still drying.</h2><p>Research logs, paper notes, and life fragments will live here.</p></div></div></section>'
-    write_page("/blog/", "Blog", body)
+    write_page("/blog/", "Blog", body, "Research notes, photography, and field observations by Yanjie Huang (黄䶮杰).")
 
 
 def build_posts(posts):
@@ -425,7 +517,13 @@ def build_simple_page(source: str):
     body = render_liquid_paths(body)
     if not data.get("hide_title"):
         body = page_head(data["title"], data.get("eyebrow", "Pages"), data.get("subtitle", "")) + body
-    write_page(data["permalink"], data["title"], body)
+    write_page(
+        data["permalink"],
+        data["title"],
+        body,
+        data.get("description", data.get("subtitle", "")),
+        data.get("robots", DEFAULT_ROBOTS),
+    )
 
 
 def main():
@@ -441,8 +539,8 @@ def main():
     build_simple_page("cv.md")
     build_simple_page("cat.md")
     build_simple_page("contact.md")
-    write_page("/works/", "Projects", '<section class="section page-section"><div class="container"><div class="empty-state"><h2>Works moved to Projects.</h2><p>The research portfolio now lives at <a href="/projects/">Projects</a>.</p><a class="button" href="/projects/">Open Projects</a></div></div></section>')
-    write_page("/404.html", "Page Not Found", '<section class="section page-section"><div class="container"><div class="empty-state"><h2>This path has not grown a page yet.</h2><p>Try the home page, projects, blog, CV, contact, or Pixie page.</p><a class="button" href="/">Return home</a></div></div></section>')
+    write_page("/works/", "Projects", '<section class="section page-section"><div class="container"><div class="empty-state"><h2>Works moved to Projects.</h2><p>The research portfolio now lives at <a href="/projects/">Projects</a>.</p><a class="button" href="/projects/">Open Projects</a></div></div></section>', PROJECTS_DESC)
+    write_page("/404.html", "Page Not Found", '<section class="section page-section"><div class="container"><div class="empty-state"><h2>This path has not grown a page yet.</h2><p>Try the home page, projects, blog, CV, contact, or Pixie page.</p><a class="button" href="/">Return home</a></div></div></section>', robots="noindex,follow")
     (OUT / "robots.txt").write_text((ROOT / "robots.txt").read_text(encoding="utf-8"), encoding="utf-8")
     print(f"Built preview at {OUT}")
 

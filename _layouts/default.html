@@ -4,8 +4,100 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     {% assign settings = site.data.settings %}
-    <title>{% if page.title and page.title != "Home" %}{{ page.title }} | {% endif %}{{ settings.title | default: site.title }}</title>
-    <meta name="description" content="{{ page.description | default: settings.description | default: site.description }}">
+    {% if page.url == "/" %}
+      {% assign seo_title = settings.seo.home_title %}
+    {% else %}
+      {% capture seo_title %}{{ page.title }} | {{ settings.author.name }} {{ settings.author.name_zh }}{% endcapture %}
+    {% endif %}
+    {% if page.url == "/projects/" %}
+      {% assign seo_description = page.description | default: settings.seo.projects_description %}
+    {% else %}
+      {% assign seo_description = page.description | default: page.excerpt | default: page.subtitle | default: settings.seo.default_description | default: settings.description | default: site.description %}
+    {% endif %}
+    {% assign seo_image = page.image | default: settings.author.avatar %}
+    {% assign canonical_url = page.url | absolute_url %}
+    {% assign person_id = '/#person' | absolute_url %}
+    {% assign website_id = '/#website' | absolute_url %}
+    {% assign robots_directive = page.robots | default: 'index,follow,max-image-preview:large' %}
+    <title>{{ seo_title | strip | escape }}</title>
+    <meta name="description" content="{{ seo_description | strip_html | strip_newlines | strip | escape }}">
+    <meta name="robots" content="{{ robots_directive }}">
+    <link rel="canonical" href="{{ canonical_url }}">
+    {% if site.google_site_verification and site.google_site_verification != "" %}
+      <meta name="google-site-verification" content="{{ site.google_site_verification | escape }}">
+    {% endif %}
+    <meta property="og:type" content="{% if page.collection == 'posts' %}article{% else %}website{% endif %}">
+    <meta property="og:site_name" content="{{ settings.author.name }} {{ settings.author.name_zh }}">
+    <meta property="og:locale" content="en_US">
+    <meta property="og:title" content="{{ seo_title | strip | escape }}">
+    <meta property="og:description" content="{{ seo_description | strip_html | strip_newlines | strip | escape }}">
+    <meta property="og:url" content="{{ canonical_url }}">
+    {% if seo_image %}
+      <meta property="og:image" content="{{ seo_image | absolute_url }}">
+      <meta property="og:image:alt" content="Portrait of {{ settings.author.name }}">
+    {% endif %}
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="{{ seo_title | strip | escape }}">
+    <meta name="twitter:description" content="{{ seo_description | strip_html | strip_newlines | strip | escape }}">
+    {% if seo_image %}
+      <meta name="twitter:image" content="{{ seo_image | absolute_url }}">
+      <meta name="twitter:image:alt" content="Portrait of {{ settings.author.name }}">
+    {% endif %}
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {% if page.url == "/" or page.url == "/cv/" %}
+          {
+            "@type": "Person",
+            "@id": {{ person_id | jsonify }},
+            "name": {{ settings.author.name | jsonify }},
+            "alternateName": {{ settings.author.name_zh | jsonify }},
+            "url": {{ site.url | jsonify }},
+            "email": {{ site.email | jsonify }},
+            "image": {{ settings.author.avatar | absolute_url | jsonify }},
+            "jobTitle": {{ settings.author.job_title | jsonify }},
+            "affiliation": {
+              "@type": "CollegeOrUniversity",
+              "name": {{ settings.author.affiliation | jsonify }},
+              "url": {{ settings.author.affiliation_url | jsonify }}
+            },
+            "knowsAbout": [
+              {% for interest in settings.author.research_interests %}
+              {{ interest | jsonify }}{% unless forloop.last %},{% endunless %}
+              {% endfor %}
+            ],
+            "sameAs": [
+              {% for profile in settings.author.same_as %}
+              {{ profile | jsonify }}{% unless forloop.last %},{% endunless %}
+              {% endfor %}
+            ]
+          },
+          {% endif %}
+          {% if page.url == "/" %}
+          {
+            "@type": "WebSite",
+            "@id": {{ website_id | jsonify }},
+            "url": {{ site.url | jsonify }},
+            "name": {{ settings.author.name | jsonify }},
+            "alternateName": {{ settings.author.name_zh | jsonify }},
+            "publisher": { "@id": {{ person_id | jsonify }} }
+          },
+          {% endif %}
+          {
+            "@type": "WebPage",
+            "@id": {{ canonical_url | append: '#webpage' | jsonify }},
+            "url": {{ canonical_url | jsonify }},
+            "name": {{ seo_title | strip | jsonify }},
+            "description": {{ seo_description | strip_html | strip_newlines | strip | jsonify }},
+            "author": { "@id": {{ person_id | jsonify }} },
+            "about": { "@id": {{ person_id | jsonify }} },
+            "isPartOf": { "@id": {{ website_id | jsonify }} },
+            "inLanguage": "en"
+          }
+        ]
+      }
+    </script>
     <link rel="icon" href="{{ '/assets/shared/icons/favicon.svg' | relative_url }}" type="image/svg+xml">
     <link rel="stylesheet" href="{{ '/assets/css/styles.css' | relative_url }}">
   </head>

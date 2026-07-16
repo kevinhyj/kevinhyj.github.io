@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Home
-description: "Yanjie Huang's visual garden for AI4Bio research, projects, and field notes."
+description: "Yanjie Huang (黄䶮杰) is an undergraduate researcher at Shanghai Jiao Tong University working on AI and AI for Bio, including biological reasoning, molecular foundation models, diffusion, post-training, and molecular design."
 ---
 
 {% assign settings = site.data.settings %}

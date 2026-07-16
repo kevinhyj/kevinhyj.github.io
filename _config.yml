@@ -4,6 +4,9 @@ url: "https://kevinhyj.github.io"
 baseurl: ""
 email: "huangyanjie@sjtu.edu.cn"
 github_username: "kevinhyj"
+# Paste the value from Google Search Console's HTML-tag verification method here.
+# The tag is rendered only after a value is supplied.
+google_site_verification: ""
 
 markdown: kramdown
 permalink: /blog/:slug/

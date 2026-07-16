@@ -23,8 +23,26 @@ menu:
 author:
   name: "Yanjie Huang"
   name_zh: "黄䶮杰"
+  job_title: "Undergraduate Researcher"
+  affiliation: "Shanghai Jiao Tong University"
+  affiliation_url: "https://www.sjtu.edu.cn/"
+  research_interests:
+    - "AI"
+    - "AI for Bio"
+    - "Biological reasoning models"
+    - "Molecular foundation models"
+    - "Diffusion models"
+    - "Post-training"
+    - "Molecular design"
+  same_as:
+    - "https://github.com/kevinhyj"
   bio: "AI4Bio, foundation models, snow, notes, and Pixie someday."
   avatar: "/assets/shared/portraits/home-window.jpeg"
+
+seo:
+  home_title: "Yanjie Huang 黄䶮杰 | AI for Bio Researcher at Shanghai Jiao Tong University"
+  default_description: "Yanjie Huang (黄䶮杰) is an undergraduate researcher at Shanghai Jiao Tong University working on AI and AI for Bio, including biological reasoning, molecular foundation models, diffusion, post-training, and molecular design."
+  projects_description: "Research projects and publications by Yanjie Huang (黄䶮杰) in AI and AI for Bio, including biological reasoning, generative models, and molecular design."
 
 social:
   - label: "Email"

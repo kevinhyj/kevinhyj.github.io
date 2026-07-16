@@ -3,6 +3,7 @@ title: Contact
 permalink: /contact/
 eyebrow: Contact
 subtitle: "For PhD applications, research collaborations, and research engineering opportunities."
+description: "Contact Yanjie Huang (黄䶮杰), an undergraduate researcher at Shanghai Jiao Tong University, for PhD applications, research collaborations, and research engineering opportunities."
 ---
 
 <section class="section page-section">

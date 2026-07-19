@@ -20,6 +20,7 @@ HOME_DESC = "Yanjie Huang (黄䶮杰) is an undergraduate researcher at Shanghai
 PROJECTS_DESC = "Research projects and publications by Yanjie Huang (黄䶮杰) in AI and AI for Bio, including biological reasoning, generative models, and molecular design."
 DEFAULT_ROBOTS = "index,follow,max-image-preview:large"
 GOOGLE_SITE_VERIFICATION = ""
+BING_SITE_VERIFICATION = "BF37BC7552D2B2223FDF3869395E7B82"
 EMAIL = "huangyanjie@sjtu.edu.cn"
 GITHUB = "https://github.com/kevinhyj"
 AUTHOR_IMAGE = "/assets/shared/portraits/home-window.jpeg"
@@ -249,11 +250,15 @@ def default_layout(title: str, body: str, description: str = "", path: str = "/"
         }
     )
     structured_data = json.dumps({"@context": "https://schema.org", "@graph": graph}, ensure_ascii=False, indent=2)
-    verification_tag = (
-        f'    <meta name="google-site-verification" content="{html.escape(GOOGLE_SITE_VERIFICATION, quote=True)}">\n'
-        if GOOGLE_SITE_VERIFICATION
-        else ""
-    )
+    verification_tag = ""
+    if GOOGLE_SITE_VERIFICATION:
+        verification_tag += (
+            f'    <meta name="google-site-verification" content="{html.escape(GOOGLE_SITE_VERIFICATION, quote=True)}">\n'
+        )
+    if BING_SITE_VERIFICATION:
+        verification_tag += (
+            f'    <meta name="msvalidate.01" content="{html.escape(BING_SITE_VERIFICATION, quote=True)}">\n'
+        )
     escaped_title = html.escape(page_title, quote=True)
     escaped_desc = html.escape(desc, quote=True)
     gallery = "\n".join(photo_picture(src, alt, "(max-width: 560px) 100vw, (max-width: 900px) 50vw, 25vw") for src, alt in GALLERY)

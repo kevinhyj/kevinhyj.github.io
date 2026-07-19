@@ -7,6 +7,8 @@ github_username: "kevinhyj"
 # Paste the value from Google Search Console's HTML-tag verification method here.
 # The tag is rendered only after a value is supplied.
 google_site_verification: ""
+# Bing Webmaster Tools HTML-tag verification value. Rendered site-wide when set.
+bing_site_verification: "BF37BC7552D2B2223FDF3869395E7B82"
 
 markdown: kramdown
 permalink: /blog/:slug/

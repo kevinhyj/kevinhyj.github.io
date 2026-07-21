@@ -13,6 +13,7 @@ description: "Academic CV of Yanjie Huang (黄䶮杰), an undergraduate research
         <p class="cv-lead">I am an undergraduate researcher at Shanghai Jiao Tong University. My research lies at the intersection of generative AI and scientific discovery, with a focus on reasoning, alignment and molecular design.</p>
         <div class="resource-links cv-actions">
           <a href="mailto:huangyanjie@sjtu.edu.cn">Email me</a>
+          <a class="cv-action-secondary" href="{{ '/assets/cv/Yanjie-Huang-CV.pdf' | relative_url }}" target="_blank" rel="noopener">Download CV (PDF)</a>
           <a class="cv-action-secondary" href="https://github.com/kevinhyj" target="_blank" rel="noopener">GitHub</a>
           <a class="cv-action-secondary" href="{{ '/projects/' | relative_url }}">Selected work</a>
         </div>

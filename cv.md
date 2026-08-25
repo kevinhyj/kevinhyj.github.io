@@ -153,7 +153,7 @@ description: "Academic CV of Yanjie Huang (黄䶮杰), an undergraduate research
           <span class="cv-publication-index">01</span>
           <div>
             <h3>EVA: A Long-Context Generative Foundation Model Deciphers RNA Design Principles</h3>
-            <p><strong>Y. Huang*</strong>, G. Lv*, et al. · <em>Nature Machine Intelligence</em>, under revision · 2026</p>
+            <p><strong>Y. Huang*</strong>, G. Lv*, et al. · <em>Nature Machine Intelligence</em>, accepted · 2026</p>
             <a href="https://www.biorxiv.org/content/10.64898/2026.03.17.712398v2" target="_blank" rel="noopener">Preprint</a>
           </div>
         </article>

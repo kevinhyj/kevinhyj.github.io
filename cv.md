@@ -136,7 +136,7 @@ description: "Academic CV of Yanjie Huang (黄䶮杰), an undergraduate research
           </a>
           <a class="cv-project" href="{{ '/work/self-evolving-diffusion/' | relative_url }}">
             <p class="eyebrow">Multimodal self-improvement · May – Sep 2026</p>
-            <h3>UniEvo-VL ★</h3>
+            <h3>UniEvo-VL</h3>
             <p>Co-first author. Built distributed on-policy self-distillation for unified multimodal models and implemented ablations over sampling and teacher dynamics. Submitted to ICLR 2027.</p>
             <span>View project →</span>
           </a>

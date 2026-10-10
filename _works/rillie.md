@@ -4,7 +4,7 @@ subtitle: "Capturing natural evolution in function-guided RNA design via genomic
 kind: "Genomic Foundation Model"
 year: "2025"
 role: "Team leader / first author"
-status: "Preprint"
+status: "Communications Biology, under review"
 order: 3
 image: "/assets/works/rillie/rillie-fluorescent-aptamer-cover.png"
 detail_image: "/assets/works/rillie/broccoli-cell-imaging.svg"

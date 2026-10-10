@@ -4,7 +4,7 @@ subtitle: "AF3-based hallucination with inference-time scaling for binder and TC
 kind: "Protein Foundation Model"
 year: "2026"
 role: "Co-first author"
-status: "Submitted to NeurIPS 2026"
+status: "Submitted to ICLR 2027"
 order: 4
 image: "/assets/works/proteocraft/method-overview-cover.png"
 tags:
@@ -56,4 +56,4 @@ I am a co-first author on ProteoCraft and worked across the foundation-model for
 
 ## Release
 
-The manuscript has been submitted to NeurIPS 2026. Public links, code, and paper materials will be added here after release.
+The manuscript has been submitted to ICLR 2027. Public links, code, and paper materials will be added here after release.

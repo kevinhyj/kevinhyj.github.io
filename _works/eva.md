@@ -4,7 +4,7 @@ subtitle: "A long-context generative RNA foundation model for universal modeling
 kind: "Genomic Foundation Model"
 year: "2026"
 role: "Team leader / first author"
-status: "Accepted at Nature Machine Intelligence"
+status: "Nature Machine Intelligence: Accepted, Spotlight (Top 10%)"
 order: 1
 image: "/assets/works/eva/cover.png"
 tags:

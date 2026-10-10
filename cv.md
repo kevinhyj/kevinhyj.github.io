@@ -2,7 +2,7 @@
 title: Academic CV
 permalink: /cv/
 eyebrow: Curriculum vitae
-description: "Academic CV of Yanjie Huang (黄䶮杰), an undergraduate researcher at Shanghai Jiao Tong University: education, research experience, selected publications, and projects in AI and AI for Bio."
+description: "Academic CV of Yanjie Huang (黄䶮杰), an undergraduate researcher at Shanghai Jiao Tong University working on generative AI and scientific discovery, with a focus on scientific synthetic data, reasoning, alignment, and molecular design."
 ---
 
 <section class="section page-section cv-page">
@@ -10,7 +10,7 @@ description: "Academic CV of Yanjie Huang (黄䶮杰), an undergraduate research
     <div class="cv-profile">
       <div class="cv-profile-copy">
         <p class="cv-name-line">Yanjie Huang <span>黄䶮杰</span></p>
-        <p class="cv-lead">I am an undergraduate researcher at Shanghai Jiao Tong University. My research lies at the intersection of generative AI and scientific discovery, with a focus on reasoning, alignment and molecular design.</p>
+        <p class="cv-lead">I am an undergraduate researcher at Shanghai Jiao Tong University. My research lies at the intersection of generative AI and scientific discovery, with a focus on scientific synthetic data, reasoning, alignment, and molecular design.</p>
         <div class="resource-links cv-actions">
           <a href="mailto:huangyanjie@sjtu.edu.cn">Email me</a>
           <a class="cv-action-secondary" href="{{ '/assets/cv/Yanjie-Huang-CV.pdf' | relative_url }}" target="_blank" rel="noopener">Download CV (PDF)</a>
@@ -22,7 +22,7 @@ description: "Academic CV of Yanjie Huang (黄䶮杰), an undergraduate research
       <dl class="cv-facts" aria-label="Academic profile at a glance">
         <div>
           <dt>Education</dt>
-          <dd>SJTU · CS</dd>
+          <dd>SJTU · Computer Science</dd>
         </div>
         <div>
           <dt>Expected</dt>
@@ -30,7 +30,7 @@ description: "Academic CV of Yanjie Huang (黄䶮杰), an undergraduate research
         </div>
         <div>
           <dt>GPA</dt>
-          <dd>3.98 / 4.30</dd>
+          <dd>3.7</dd>
         </div>
         <div>
           <dt>Focus</dt>
@@ -51,13 +51,13 @@ description: "Academic CV of Yanjie Huang (黄䶮杰), an undergraduate research
               <img class="cv-institution-logo cv-institution-logo-sjtu" src="{{ '/assets/shared/logos/sjtu.png' | relative_url }}" alt="Shanghai Jiao Tong University logo">
               <div>
                 <h3>Shanghai Jiao Tong University</h3>
-                <p class="cv-role">Bachelor of Computer Science and Technology</p>
+                <p class="cv-role">Computer Science</p>
               </div>
             </div>
             <p class="cv-date">Sep 2023 – Jun 2027</p>
           </div>
-          <p>GPA: <strong>3.98 / 4.30</strong> · Shanghai, China</p>
-          <p>Selected for the Bolè Plan (Elite Scientific Talent Program) as one of 30 students from 18,584 undergraduates, recognizing exceptional scientific potential and dedication.</p>
+          <p>GPA: <strong>3.7</strong> · Comprehensive evaluation: <strong>92.4 / 100, ranked 2nd of 22</strong> · Shanghai, China</p>
+          <p>Selected as the sole student from SJTU's Global Institute of Future Technology and one of 30 students from 18,584 undergraduates for the Bolè Plan (Elite Scientific Talent Program), recognizing exceptional research potential.</p>
         </article>
       </div>
     </section>
@@ -74,16 +74,17 @@ description: "Academic CV of Yanjie Huang (黄䶮杰), an undergraduate research
               <img class="cv-institution-logo cv-institution-logo-stanford" src="{{ '/assets/shared/logos/stanford.webp' | relative_url }}" alt="Stanford University logo">
               <div>
                 <h3>Stanford University · Yejin Choi Group</h3>
-                <p class="cv-role">Research Intern</p>
+                <p class="cv-role">Research Assistant</p>
               </div>
             </div>
-            <p class="cv-date">Apr 2026 – Present</p>
+            <p class="cv-date">Mar 2026 – Present</p>
           </div>
           <p>Mentored by <a href="https://hai.stanford.edu/people/fang-wu" target="_blank" rel="noopener"><strong>Fang Wu</strong></a> &amp; <a href="https://profiles.stanford.edu/yejin-choi?tab=bio" target="_blank" rel="noopener"><strong>Yejin Choi</strong></a>.</p>
-          <p>Researching biological reasoning models, diffusion models, and post-training, with an emphasis on reasoning-centered molecular intelligence and training methods for scientific generative models.</p>
+          <p>Researching biological reasoning, unified multimodal models, and post-training, with an emphasis on scientific synthetic data and molecular design. Completed UniEvo-VL (May – Sep 2026), building a distributed on-policy self-distillation pipeline and conducting training ablations.</p>
           <div class="cv-tag-row" aria-label="Current research areas">
             <span>Bio reasoning</span>
-            <span>Diffusion</span>
+            <span>Unified multimodal models</span>
+            <span>Scientific synthetic data</span>
             <span>Post-training</span>
             <span>AI for Science</span>
           </div>
@@ -98,7 +99,7 @@ description: "Academic CV of Yanjie Huang (黄䶮杰), an undergraduate research
                 <p class="cv-role">Research Intern · Shanghai</p>
               </div>
             </div>
-            <p class="cv-date">Sep 2025 – Present</p>
+            <p class="cv-date">Aug 2025 – Nov 2025</p>
           </div>
           <ul class="cv-list">
             <li>Optimized Model Context Protocol design for the Origene scientific agent.</li>
@@ -133,6 +134,12 @@ description: "Academic CV of Yanjie Huang (黄䶮杰), an undergraduate research
             <p>Developing chain-of-thought data and reasoning-centered methods for antibody, enzyme, and synthetic protein design.</p>
             <span>View project →</span>
           </a>
+          <a class="cv-project" href="{{ '/work/self-evolving-diffusion/' | relative_url }}">
+            <p class="eyebrow">Multimodal self-improvement · May – Sep 2026</p>
+            <h3>UniEvo-VL ★</h3>
+            <p>Co-first author. Built distributed on-policy self-distillation for unified multimodal models and implemented ablations over sampling and teacher dynamics. Submitted to ICLR 2027.</p>
+            <span>View project →</span>
+          </a>
           <a class="cv-project" href="{{ '/work/rl-diffusion/' | relative_url }}">
             <p class="eyebrow">Diffusion post-training</p>
             <h3>What Matters in RL for Diffusion Models?</h3>
@@ -153,39 +160,56 @@ description: "Academic CV of Yanjie Huang (黄䶮杰), an undergraduate research
           <span class="cv-publication-index">01</span>
           <div>
             <h3>EVA: A Long-Context Generative Foundation Model Deciphers RNA Design Principles</h3>
-            <p><strong>Y. Huang*</strong>, G. Lv*, et al. · <em>Nature Machine Intelligence</em>, accepted · 2026</p>
+            <p><strong>Y. Huang*</strong>, G. Lv*, et al. · <em>Nature Machine Intelligence</em>, Accepted, Spotlight (Top 10%) · 2026</p>
             <a href="https://www.biorxiv.org/content/10.64898/2026.03.17.712398v2" target="_blank" rel="noopener">Preprint</a>
           </div>
         </article>
         <article class="cv-publication">
           <span class="cv-publication-index">02</span>
           <div>
-            <h3>PhaseFlow: A Unified Model for Multi-modal and Multi-scale Phase-separating Protein Understanding and Design</h3>
-            <p>Y. Zhu*, <strong>Y. Huang*</strong>, et al. · <em>Nature</em>, submitted · 2026</p>
+            <h3>PhaseFlow: A Unified Model for Multi-scale Biomolecular Condensates Understanding and Design</h3>
+            <p>Y. Zhu*, <strong>Y. Huang*</strong>, et al. · <em>Nature</em>, Under Review · 2026</p>
             <a href="{{ '/work/phaseflow/' | relative_url }}">Project page</a>
           </div>
         </article>
         <article class="cv-publication">
           <span class="cv-publication-index">03</span>
           <div>
-            <h3>ProteoCraft: Proposal-Verification Search for Protein Design with Diffusion Structure Predictors</h3>
-            <p>F. Wu*, H. Lin*, B. Duan*, <strong>Y. Huang*</strong>, Y. Li*, et al. · Submitted to NeurIPS 2026</p>
-            <a href="{{ '/work/proteocraft/' | relative_url }}">Project page</a>
+            <h3>Energy-Adaptive Elastic Equivariant Transformer-SSM for Noise-Robust Protein Structure Representation</h3>
+            <p>Zhongyue Zhang, Runze Ma, <strong>Yanjie Huang</strong>, Shuangjia Zheng† · NeurIPS 2026 (Accepted)</p>
+            <a href="https://arxiv.org/abs/2503.16996" target="_blank" rel="noopener">Preprint</a>
           </div>
         </article>
         <article class="cv-publication">
           <span class="cv-publication-index">04</span>
           <div>
-            <h3>What Matters in RL for Diffusion Models? The Dominant Role of Noise</h3>
-            <p>Research collaborator · Submitted to NeurIPS 2026</p>
-            <a href="{{ '/work/rl-diffusion/' | relative_url }}">Project page</a>
+            <h3>ProteoCraft: Proposal-Verification Search for Protein Design with Diffusion Structure Predictors</h3>
+            <p>F. Wu*, H. Lin*, B. Duan*, <strong>Y. Huang*</strong>, Y. Li*, et al. · ICLR 2027 (Submitted)</p>
+            <a href="{{ '/work/proteocraft/' | relative_url }}">Project page</a>
           </div>
         </article>
         <article class="cv-publication">
           <span class="cv-publication-index">05</span>
           <div>
-            <h3>Capturing Natural Evolution in RNA Design via Genomic Foundation Models</h3>
-            <p><strong>Y. Huang</strong>, B. Zhang, et al. · Preprint · 2025</p>
+            <h3>UniEvo-VL: An On-policy Self-Distillation Training Recipe for Multimodal Model Self-improvement</h3>
+            <p>Fang Wu*, Da Xing*, <strong>Yanjie Huang*</strong>, Junxi Wang*, …, Jure Leskovec†, Yejin Choi† · ICLR 2027 (Submitted)</p>
+            <a href="https://arxiv.org/abs/2609.38721" target="_blank" rel="noopener">Preprint</a>
+            <a href="{{ '/work/self-evolving-diffusion/' | relative_url }}">Project page</a>
+          </div>
+        </article>
+        <article class="cv-publication">
+          <span class="cv-publication-index">06</span>
+          <div>
+            <h3>What Matters in RL for Diffusion Models? The Dominant Role of Noise</h3>
+            <p>Da Xing, Haokai Zhao, Yanchao Li, Hanqun Cao, <strong>Yanjie Huang</strong>, et al. · ICLR 2027 (Submitted)</p>
+            <a href="{{ '/work/rl-diffusion/' | relative_url }}">Project page</a>
+          </div>
+        </article>
+        <article class="cv-publication">
+          <span class="cv-publication-index">07</span>
+          <div>
+            <h3>Capturing Natural Evolution in RNA Design for in Vivo Functionality via Genomic Foundational Models</h3>
+            <p><strong>Y. Huang*</strong>, B. Zhang*, et al. · <em>Communications Biology</em>, Under Review · 2025</p>
             <a href="https://doi.org/10.1101/2025.04.08.647793" target="_blank" rel="noopener">Preprint</a>
           </div>
         </article>
@@ -199,6 +223,7 @@ description: "Academic CV of Yanjie Huang (黄䶮杰), an undergraduate research
       </div>
       <div class="cv-section-body">
         <ul class="cv-honors">
+          <li><span>2026</span><strong>National Scholarship for Undergraduate Students</strong><p>Sep 2026.</p></li>
           <li><span>SJTU</span><strong>Bolè Plan</strong><p>Elite Scientific Talent Program, Shanghai Jiao Tong University.</p></li>
           <li><span>2022</span><strong>Bronze Medal</strong><p>Chinese Mathematical Olympiad.</p></li>
           <li><span>IMMC</span><strong>First Prize · International Round</strong><p>The 7th International Mathematical Modeling Challenge.</p></li>
@@ -214,15 +239,15 @@ description: "Academic CV of Yanjie Huang (黄䶮杰), an undergraduate research
       <div class="cv-section-body cv-skill-groups">
         <div class="cv-skill-group">
           <h3>Models</h3>
-          <p>MoE Transformers, multimodal Transformers, flow matching, mechanistic interpretability, scientific agents.</p>
+          <p>MoE Transformers (MegaBlocks), unified multimodal models (Qwen-Image, Bagel), flow matching, mechanistic interpretability, scientific agents.</p>
         </div>
         <div class="cv-skill-group">
           <h3>Training</h3>
-          <p>Pretraining, SFT, LoRA, full-parameter tuning, DPO, GRPO, inference-time optimization, vLLM.</p>
+          <p>Pretraining, SFT, LoRA, full-parameter tuning, DPO, OPSD, GRPO, inference-time optimization, vLLM.</p>
         </div>
         <div class="cv-skill-group">
           <h3>Scientific Computing</h3>
-          <p>Large-scale data processing, SELEX/NGS pipelines, metagenomic mining, structure-based data mining.</p>
+          <p>Scientific synthetic data, large-scale data processing, SELEX/NGS pipelines, metagenomic mining, structure-based data mining.</p>
         </div>
         <div class="cv-skill-group">
           <h3>Molecular Design</h3>

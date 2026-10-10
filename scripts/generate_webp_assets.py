@@ -17,6 +17,7 @@ CARD_IMAGES = (
     ROOT / "assets/works/proteocraft/method-overview-cover.png",
     ROOT / "assets/works/rillie/rillie-fluorescent-aptamer-cover.png",
     ROOT / "assets/works/rl-diffusion/ningshan/rl-diffusion-000.png",
+    ROOT / "assets/works/unievo-vl/overview.png",
 )
 
 

@@ -1,10 +1,10 @@
 ---
 title: "PhaseFlow"
-subtitle: "A unified model for multi-modal and multi-scale phase-separating protein understanding and design."
+subtitle: "A unified model for multi-scale biomolecular condensates understanding and design."
 kind: "Protein Foundation Model"
 year: "2026"
 role: "Team leader / co-first author"
-status: "Nature, submitted"
+status: "Nature, under review"
 order: 2
 image: "/assets/works/phaseflow/cover.png"
 tags:

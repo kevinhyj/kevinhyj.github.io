@@ -5,7 +5,7 @@ kind: "Multimodal Models / Post-training"
 year: "2026"
 role: "Co-first author"
 status: "Submitted to ICLR 2027"
-order: 7
+order: 6
 image: "/assets/works/unievo-vl/overview.png"
 detail_image: "/assets/works/unievo-vl/method.png"
 tags:

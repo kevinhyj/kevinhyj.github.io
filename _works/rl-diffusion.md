@@ -5,7 +5,7 @@ kind: "RL for Diffusion"
 year: "2026"
 role: "Research collaborator"
 status: "Submitted to ICLR 2027"
-order: 6
+order: 7
 image: "/assets/works/rl-diffusion/ningshan/rl-diffusion-000.png"
 tags:
   - Reinforcement learning

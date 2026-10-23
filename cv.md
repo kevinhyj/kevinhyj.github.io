@@ -51,7 +51,7 @@ description: "Academic CV of Yanjie Huang (黄䶮杰), a Shanghai Jiao Tong Univ
         </article>
         <article class="cv-entry">
           <div class="cv-entry-head"><div class="cv-institution"><div><h3>Columbia University</h3><p class="cv-role">Research Team Leader</p></div></div></div>
-          <p>Advisors: Prof. Erran Li and Dr. Fang Wu.</p>
+          <p>Advisor: Prof. Erran Li.</p>
           <ul class="cv-list">
             <li><strong>Proteo-R1 · Mar – Apr 2026.</strong> Synthesized reasoning data for alignment, mid-training, and joint training, improving indexing ability by 40% and translating model understanding into controllable antibody design. ICML (Accepted).</li>
           </ul>

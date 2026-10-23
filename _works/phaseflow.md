@@ -5,7 +5,7 @@ kind: "Protein Foundation Model"
 year: "2026"
 role: "Team leader / co-first author"
 status: "Nature, under review"
-order: 2
+order: 4
 image: "/assets/works/phaseflow/cover.png"
 tags:
   - LLPS
@@ -47,7 +47,7 @@ The core peptide module jointly models amino acid sequences and 4x4 PSSI phase d
 
 ## My Role
 
-I worked across dataset processing, model design, training and evaluation, inference-time optimization, design workflows, and scientific visualization. I also helped shape PhaseFlow into a multi-scale system that links protein-level prediction, peptide-level generation, and mutation-level optimization.
+I built data and quality-control pipelines for a high-throughput phase-separation dataset and developed a unified model combining sequence generation with flow matching for phase-diagram prediction. The model outperformed DDPM and Transformer-only baselines. I also implemented inference-time scaling for controllable design, improving self-consistency by 30%.
 
 ## Release
 

@@ -52,7 +52,9 @@ Proteo-R1 focuses on de novo antibody CDR design, where residue-level reasoning 
 
 ## My Role
 
-My main work is building chain-of-thought reasoning data for synthetic protein design, especially for the Proteo-R2 enzyme-design direction. I also contributed to the broader Proteo-R line of work, with focus on turning multimodal molecular reasoning into controllable design behavior.
+For Proteo-R2, I built programmatic pipelines to generate, filter, and standardize reasoning traces for text-molecule alignment, mid-training, and joint training. I trained residue- and atom-level reasoning models for controllable molecular design.
+
+For Proteo-R1, I synthesized reasoning data for alignment, mid-training, and joint training, improving indexing ability by 40% and translating model understanding into controllable antibody design.
 
 ## Release
 

@@ -4,8 +4,8 @@ subtitle: "An On-policy Self-Distillation Training Recipe for Multimodal Model S
 kind: "Multimodal Models / Post-training"
 year: "2026"
 role: "Co-first author"
-status: "Submitted to ICLR 2027"
-order: 6
+status: "ICLR 2027 (Under Review)"
+order: 1
 image: "/assets/works/unievo-vl/overview.png"
 detail_image: "/assets/works/unievo-vl/method.png"
 tags:
@@ -39,10 +39,10 @@ The paper reports direct-generation improvements on Qwen-Image-2512: GenEval inc
 
 ## My Role
 
-I am a co-first author and worked on this project from **May to September 2026**. I built the first distributed OPSD pipeline, covering on-policy sampling, self-distillation, LoRA finetuning, and evaluation. I also implemented ablations over noise, prompts, seeds, denoising steps, and teacher dynamics to study training quality and stability.
+I am a co-first author and worked on this project from **May to September 2026**. I built the initial distributed OPSD pipeline for unified multimodal models, integrating on-policy sampling, critique-conditioned teacher feedback, LoRA updates, and evaluation. I implemented ablations over noise, prompts, seeds, denoising steps, and teacher dynamics to study self-improvement quality and training stability.
 
 ## Paper
 
 Fang Wu*, Da Xing*, **Yanjie Huang***, Junxi Wang*, …, Jure Leskovec†, Yejin Choi† (2026).
 
-The manuscript is available on arXiv and has been submitted to **ICLR 2027**.
+The manuscript is available on arXiv and is **under review at ICLR 2027**.

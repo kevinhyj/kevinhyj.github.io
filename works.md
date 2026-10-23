@@ -2,7 +2,7 @@
 title: Projects
 permalink: /projects/
 eyebrow: Projects
-subtitle: "AI4Bio systems, generative models, and scientific agents."
+subtitle: "Self-improving AI, automated research, and biomolecular design."
 ---
 
 <section class="section page-section">

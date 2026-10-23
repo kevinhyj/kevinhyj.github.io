@@ -12,8 +12,8 @@ description: "Contact Yanjie Huang (黄䶮杰), an undergraduate researcher at S
       {% include responsive-photo.html src="/assets/shared/portraits/home-window.jpeg" alt="Yanjie Huang" sizes="(max-width: 900px) 100vw, 48vw" %}
       <div class="contact-copy">
         <p class="eyebrow">PhD applications · research collaborations · research engineering</p>
-        <h2>Let’s talk about models for living systems.</h2>
-        <p>I am currently exploring PhD opportunities, research collaborations, and research engineering roles at the intersection of generative AI, biological reasoning, and molecular design.</p>
+        <h2>Let’s talk about self-improving AI for research.</h2>
+        <p>I am exploring PhD opportunities, research collaborations, and research engineering roles in self-improving AI and automated research, with interests spanning ML engineering, multimodal learning, and biomolecular design.</p>
         <div class="contact-list">
           <a href="mailto:huangyanjie@sjtu.edu.cn">
             <span>Email</span>
@@ -33,7 +33,7 @@ description: "Contact Yanjie Huang (黄䶮杰), an undergraduate researcher at S
 
     <div class="contact-note">
       <p class="eyebrow">Current interests</p>
-      <p>Biological reasoning models, molecular foundation models, diffusion, post-training, and protein or RNA design.</p>
+      <p>Self-generated feedback, scientific synthetic data, post-training, test-time search, and continual improvement through computational and experimental feedback.</p>
     </div>
   </div>
 </section>

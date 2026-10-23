@@ -5,7 +5,7 @@ kind: "Genomic Foundation Model"
 year: "2026"
 role: "Team leader / first author"
 status: "Nature Machine Intelligence: Accepted, Spotlight (Top 10%)"
-order: 1
+order: 3
 image: "/assets/works/eva/cover.png"
 tags:
   - RNA
@@ -55,7 +55,9 @@ The model unifies RNA sequence scoring and generation in one framework. Causal l
 
 ## My Role
 
-As Y.H., I designed the EVA architecture and wrote the first training, inference, and fine-tuning code. I led model training and evaluation, co-curated the pretraining data, drove RNA design studies across tRNA, aptamer, CRISPR omegaRNA, vaccine, and circRNA IRES tasks, and co-created the conceptual figures, usage website, and first manuscript draft.
+I developed MoE architectures with MegaBlocks and the first pretraining and mid-training code, achieving 30% lower perplexity than the dense baseline. I co-curated and released OpenRNA v1 across more than 15 RNA types, benchmarked zero-shot fitness and gene-essentiality prediction, and used sparse autoencoders to identify structure/function features (Spearman > 0.9) and steer generation.
+
+My work connects model development with experimental validation: I designed and optimized functional RNAs and CRISPR-Cas systems, with the best designed aptamers improving both fluorescence and binding affinity by 2x over the positive control. This work informs my interest in lab-in-the-loop learning through interaction with the physical world.
 
 ## Release
 

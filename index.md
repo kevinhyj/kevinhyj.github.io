@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Home
-description: "Yanjie Huang (黄䶮杰) is an undergraduate researcher at Shanghai Jiao Tong University working on AI and AI for Bio, including biological reasoning, molecular foundation models, diffusion, post-training, and molecular design."
+description: "Yanjie Huang (黄䶮杰) is an undergraduate researcher at Shanghai Jiao Tong University building self-improving AI systems for automated research through post-training, synthetic data, test-time search, and experimental feedback."
 ---
 
 {% assign settings = site.data.settings %}
@@ -18,6 +18,28 @@ description: "Yanjie Huang (黄䶮杰) is an undergraduate researcher at Shangha
         {% if settings.hero.description %}
           <p>{{ settings.hero.description }}</p>
         {% endif %}
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section research-intro" aria-labelledby="research-statement">
+  <div class="container">
+    <p class="eyebrow">Research interests</p>
+    <h2 id="research-statement">I build self-improving AI systems for automated research.</h2>
+    <p class="research-summary">My work connects algorithm design with scientific discovery, from multimodal generation and ML engineering to biomolecular design.</p>
+    <div class="research-directions">
+      <div>
+        <h3>Learning from generated experience</h3>
+        <p>How can self-generated feedback and synthetic data improve models through post-training?</p>
+      </div>
+      <div>
+        <h3>Scaling computation at test time</h3>
+        <p>How can search and computation scale efficiently for reasoning, design, and optimization?</p>
+      </div>
+      <div>
+        <h3>Learning through interaction</h3>
+        <p>How can computational and experimental feedback enable continual model improvement and scientific discovery?</p>
       </div>
     </div>
   </div>

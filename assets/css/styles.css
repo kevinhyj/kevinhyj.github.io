@@ -177,6 +177,42 @@ img {
   margin: 22px 0 0;
 }
 
+.research-intro h2 {
+  font-size: clamp(1.8rem, 3vw, 2.5rem);
+  line-height: 1.15;
+  margin: 0;
+  max-width: 900px;
+  scroll-margin-top: 120px;
+}
+
+.research-summary {
+  color: var(--muted);
+  max-width: 850px;
+}
+
+.research-directions {
+  display: grid;
+  gap: 28px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 30px;
+}
+
+.research-directions > div {
+  border-top: 2px solid var(--line);
+  padding-top: 16px;
+}
+
+.research-directions h3 {
+  font-size: 1.12rem;
+  line-height: 1.35;
+  margin: 0 0 10px;
+}
+
+.research-directions p {
+  color: var(--muted);
+  margin: 0;
+}
+
 .section {
   padding: 42px 0 68px;
 }
@@ -1332,6 +1368,11 @@ img {
 }
 
 @media (max-width: 900px) {
+  .research-directions {
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+
   .site-header .container {
     align-items: flex-start;
     flex-direction: column;

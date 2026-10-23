@@ -13,11 +13,11 @@ OUT = ROOT / "_site"
 
 SITE_TITLE = "Yanjie Huang"
 SITE_URL = "https://kevinhyj.github.io"
-HOME_TITLE = "Yanjie Huang 黄䶮杰 | AI for Bio Researcher at Shanghai Jiao Tong University"
+HOME_TITLE = "Yanjie Huang 黄䶮杰 | Self-Improving AI & Automated Research"
 AUTHOR_NAME_ZH = "黄䶮杰"
-SITE_DESC = "AI4Bio, photos, projects, and small field notes."
-HOME_DESC = "Yanjie Huang (黄䶮杰) is an undergraduate researcher at Shanghai Jiao Tong University working on AI and AI for Bio, including biological reasoning, molecular foundation models, diffusion, post-training, and molecular design."
-PROJECTS_DESC = "Research projects and publications by Yanjie Huang (黄䶮杰) in AI and AI for Bio, including biological reasoning, generative models, and molecular design."
+SITE_DESC = "Self-improving AI, automated research, photos, and field notes."
+HOME_DESC = "Yanjie Huang (黄䶮杰) is an undergraduate researcher at Shanghai Jiao Tong University building self-improving AI systems for automated research through post-training, synthetic data, test-time search, and experimental feedback."
+PROJECTS_DESC = "Research projects by Yanjie Huang (黄䶮杰) on self-improving AI, automated research, multimodal models, and biomolecular design."
 DEFAULT_ROBOTS = "index,follow,max-image-preview:large"
 GOOGLE_SITE_VERIFICATION = ""
 BING_SITE_VERIFICATION = "BF37BC7552D2B2223FDF3869395E7B82"
@@ -25,14 +25,15 @@ EMAIL = "huangyanjie@sjtu.edu.cn"
 GITHUB = "https://github.com/kevinhyj"
 AUTHOR_IMAGE = "/assets/shared/portraits/home-window.jpeg"
 HERO_IMAGE = "/assets/shared/portraits/home-window.jpeg"
-AUTHOR_BIO = "AI4Bio, foundation models, snow, notes, and Pixie someday."
+AUTHOR_BIO = "Self-improving AI, scientific discovery, snow, notes, and Pixie someday."
 RESEARCH_INTERESTS = [
-    "AI",
-    "AI for Bio",
-    "Biological reasoning models",
-    "Molecular foundation models",
-    "Diffusion models",
+    "Self-improving AI",
+    "Automated research",
+    "Scientific synthetic data",
     "Post-training",
+    "Test-time search and scaling",
+    "Multimodal models",
+    "Experimental feedback",
     "Molecular design",
 ]
 GALLERY = [
@@ -416,6 +417,11 @@ def write_page(path: str, title: str, body: str, description: str = "", robots: 
 def build_home(works, posts):
     project_cards = "\n".join(project_card(work) for work in works[:6])
     post_cards = "\n".join(post_card(post) for post in posts[:3])
+    research_intro = re.search(
+        r'<section class="section research-intro".*?</section>',
+        (ROOT / "index.md").read_text(encoding="utf-8"),
+        re.DOTALL,
+    ).group(0)
     body = f"""<section class="hero">
   <div class="container">
     <div class="hero-inner">
@@ -428,12 +434,13 @@ def build_home(works, posts):
     </div>
   </div>
 </section>
+{research_intro}
 <section class="section">
   <div class="container">
     <div class="section-head">
       <div>
         <h2>Latest works</h2>
-        <p>AI4Bio projects, generative models, and scientific agents.</p>
+        <p>Self-improving AI, automated research, and biomolecular design.</p>
       </div>
       <a href="/projects/">See all</a>
     </div>
@@ -454,7 +461,7 @@ def build_home(works, posts):
 
 def build_works(works):
     cards = "\n".join(project_card(work, "h3") for work in works)
-    body = page_head("Projects", "Projects", "AI4Bio systems, generative models, and scientific agents.")
+    body = page_head("Projects", "Projects", "Self-improving AI, automated research, and biomolecular design.")
     body += f"""<section class="section page-section">
   <div class="container">
     <div class="project-grid all-projects">{cards}</div>

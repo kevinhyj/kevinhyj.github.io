@@ -1,6 +1,6 @@
 # Site settings for the Ningshan-like visual theme.
 title: "Yanjie Huang"
-description: "AI4Bio, photos, projects, and small field notes."
+description: "Self-improving AI, automated research, photos, and field notes."
 email: "huangyanjie@sjtu.edu.cn"
 github_username: "kevinhyj"
 
@@ -27,22 +27,23 @@ author:
   affiliation: "Shanghai Jiao Tong University"
   affiliation_url: "https://www.sjtu.edu.cn/"
   research_interests:
-    - "AI"
-    - "AI for Bio"
-    - "Biological reasoning models"
-    - "Molecular foundation models"
-    - "Diffusion models"
+    - "Self-improving AI"
+    - "Automated research"
+    - "Scientific synthetic data"
     - "Post-training"
+    - "Test-time search and scaling"
+    - "Multimodal models"
+    - "Experimental feedback"
     - "Molecular design"
   same_as:
     - "https://github.com/kevinhyj"
-  bio: "AI4Bio, foundation models, snow, notes, and Pixie someday."
+  bio: "Self-improving AI, scientific discovery, snow, notes, and Pixie someday."
   avatar: "/assets/shared/portraits/home-window.jpeg"
 
 seo:
-  home_title: "Yanjie Huang 黄䶮杰 | AI for Bio Researcher at Shanghai Jiao Tong University"
-  default_description: "Yanjie Huang (黄䶮杰) is an undergraduate researcher at Shanghai Jiao Tong University working on AI and AI for Bio, including biological reasoning, molecular foundation models, diffusion, post-training, and molecular design."
-  projects_description: "Research projects and publications by Yanjie Huang (黄䶮杰) in AI and AI for Bio, including biological reasoning, generative models, and molecular design."
+  home_title: "Yanjie Huang 黄䶮杰 | Self-Improving AI & Automated Research"
+  default_description: "Yanjie Huang (黄䶮杰) is an undergraduate researcher at Shanghai Jiao Tong University building self-improving AI systems for automated research through post-training, synthetic data, test-time search, and experimental feedback."
+  projects_description: "Research projects by Yanjie Huang (黄䶮杰) on self-improving AI, automated research, multimodal models, and biomolecular design."
 
 social:
   - label: "Email"
@@ -59,7 +60,7 @@ hero:
 
 projects:
   title: "Latest works"
-  description: "AI4Bio projects, generative models, and scientific agents."
+  description: "Self-improving AI, automated research, and biomolecular design."
 
 blog:
   title: "Recent Posts"

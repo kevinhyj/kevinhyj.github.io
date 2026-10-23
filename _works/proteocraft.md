@@ -4,8 +4,8 @@ subtitle: "AF3-based hallucination with inference-time scaling for binder and TC
 kind: "Protein Foundation Model"
 year: "2026"
 role: "Co-first author"
-status: "Submitted to ICLR 2027"
-order: 4
+status: "ICLR 2027 (Under Review)"
+order: 6
 image: "/assets/works/proteocraft/method-overview-cover.png"
 tags:
   - Protein foundation models
@@ -52,8 +52,8 @@ The framework is built around a hard-forward / soft-backward sequence bridge, gr
 
 ## My Role
 
-I am a co-first author on ProteoCraft and worked across the foundation-model formulation, proposal-verification search design, benchmark analysis, figure/story construction, and manuscript development.
+I am a co-first author and worked on inference-time search and efficient model evaluation. I built reproducible benchmarks across search strategies and diffusion- and hallucination-based baselines for binder and TCR design, outperforming BindCraft, PXDesign-d, and RFDiffusion3 on success rate. I contributed to architecture, template and domain redesign, and Monte Carlo Tree Search, reducing memory usage by 40%.
 
 ## Release
 
-The manuscript has been submitted to ICLR 2027. Public links, code, and paper materials will be added here after release.
+The manuscript is under review at ICLR 2027.

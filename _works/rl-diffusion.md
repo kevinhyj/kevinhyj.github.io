@@ -4,8 +4,8 @@ subtitle: "The dominant role of noise in RL post-training for diffusion models."
 kind: "RL for Diffusion"
 year: "2026"
 role: "Research collaborator"
-status: "Submitted to ICLR 2027"
-order: 7
+status: "ICLR 2027 (Under Review)"
+order: 8
 image: "/assets/works/rl-diffusion/ningshan/rl-diffusion-000.png"
 tags:
   - Reinforcement learning
@@ -14,7 +14,7 @@ tags:
   - FlowGRPO
 ---
 
-This page describes **What Matters in RL for Diffusion Models? The Dominant Role of Noise**, submitted to ICLR 2027.
+This page describes **What Matters in RL for Diffusion Models? The Dominant Role of Noise**, under review at ICLR 2027.
 
 Reinforcement learning has become a powerful paradigm for post-training generative models: improving reasoning in language models and improving alignment in diffusion models. But a basic question has gone unanswered: what actually drives learning in RL-based diffusion training?
 

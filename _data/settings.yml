@@ -37,6 +37,7 @@ author:
     - "Molecular design"
   same_as:
     - "https://github.com/kevinhyj"
+    - "https://www.linkedin.com/in/yanjiehuang/"
   bio: "Self-improving AI, scientific discovery, snow, notes, and Pixie someday."
   avatar: "/assets/shared/portraits/home-window.jpeg"
 
@@ -50,6 +51,8 @@ social:
     url: "mailto:huangyanjie@sjtu.edu.cn"
   - label: "GitHub"
     url: "https://github.com/kevinhyj"
+  - label: "LinkedIn"
+    url: "https://www.linkedin.com/in/yanjiehuang/"
   - label: "Pixie"
     url: "/cat/"
 

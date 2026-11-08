@@ -23,6 +23,10 @@ description: "Contact Yanjie Huang (黄䶮杰), an undergraduate researcher at S
             <span>GitHub</span>
             github.com/kevinhyj
           </a>
+          <a href="https://www.linkedin.com/in/yanjiehuang/" target="_blank" rel="noopener">
+            <span>LinkedIn</span>
+            linkedin.com/in/yanjiehuang
+          </a>
           <a href="{{ '/cv/' | relative_url }}">
             <span>Academic CV</span>
             Read my background and selected work

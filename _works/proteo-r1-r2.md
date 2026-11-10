@@ -1,7 +1,7 @@
 ---
 title: "Proteo-R1 / Proteo-R2"
 subtitle: "Multi-modal Reasoning for Multi-scale Biomolecule Understanding and Design"
-kind: "Protein Reasoning Model"
+kind: "Alignment/Synthetic data"
 year: "2026"
 status: "R1: ICML 2026 accepted / R2: in progress"
 order: 5

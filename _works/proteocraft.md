@@ -1,7 +1,7 @@
 ---
 title: "ProteoCraft"
 subtitle: "AF3-based hallucination with inference-time scaling for binder and TCR design"
-kind: "Protein Foundation Model"
+kind: "Scaling computation at test time"
 year: "2026"
 role: "Co-first author"
 status: "ICLR 2027 (Under Review)"

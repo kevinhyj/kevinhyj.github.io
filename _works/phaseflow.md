@@ -1,7 +1,7 @@
 ---
 title: "PhaseFlow"
 subtitle: "A unified model for multi-scale biomolecular condensates understanding and design."
-kind: "Protein Foundation Model"
+kind: "Multimodal model/Protein design"
 year: "2026"
 role: "Team leader / co-first author"
 status: "Nature, under review"

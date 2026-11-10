@@ -580,6 +580,7 @@ def main():
     build_simple_page("cv.md")
     build_simple_page("cat.md")
     build_simple_page("contact.md")
+    build_simple_page("alpha-rare-redirect.md")
     write_page("/works/", "Projects", '<section class="section page-section"><div class="container"><div class="empty-state"><h2>Works moved to Projects.</h2><p>The research portfolio now lives at <a href="/projects/">Projects</a>.</p><a class="button" href="/projects/">Open Projects</a></div></div></section>', PROJECTS_DESC)
     write_page("/404.html", "Page Not Found", '<section class="section page-section"><div class="container"><div class="empty-state"><h2>This path has not grown a page yet.</h2><p>Try the home page, projects, blog, CV, contact, or Pixie page.</p><a class="button" href="/">Return home</a></div></div></section>', robots="noindex,follow")
     (OUT / "robots.txt").write_text((ROOT / "robots.txt").read_text(encoding="utf-8"), encoding="utf-8")

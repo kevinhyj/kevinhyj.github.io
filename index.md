@@ -1,6 +1,13 @@
 ---
 layout: default
 title: Home
+featured_work_slugs:
+  - self-evolving-diffusion
+  - recursive-self-improvement
+  - eva
+  - mutabench
+  - proteo-r1-r2
+  - proteocraft
 description: "Yanjie Huang (黄䶮杰) is an undergraduate researcher at Shanghai Jiao Tong University building self-improving AI systems for automated research through post-training, synthetic data, test-time search, and experimental feedback."
 ---
 
@@ -56,8 +63,8 @@ description: "Yanjie Huang (黄䶮杰) is an undergraduate researcher at Shangha
     </div>
 
     <div class="project-grid">
-      {% assign sorted_works = site.works | sort: "order" %}
-      {% for work in sorted_works limit:6 %}
+      {% for featured_slug in page.featured_work_slugs %}
+        {% assign work = site.works | where: "slug", featured_slug | first %}
         {% unless work.hidden %}
           <a class="project-card project-card-{{ work.slug }}" href="{{ work.url | relative_url }}">
             {% if work.image %}{% include project-card-image.html src=work.image alt=work.title %}{% elsif work.status == "In progress" %}<div class="project-placeholder" role="img" aria-label="{{ work.title }} image coming soon">?</div>{% endif %}

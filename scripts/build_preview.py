@@ -428,7 +428,9 @@ def write_page(path: str, title: str, body: str, description: str = "", robots: 
 
 
 def build_home(works, posts, writings):
-    project_cards = "\n".join(project_card(work) for work in works[:6])
+    home, _ = parse_front_matter(ROOT / "index.md")
+    by_slug = {work["slug"]: work for work in works}
+    project_cards = "\n".join(project_card(by_slug[slug]) for slug in home["featured_work_slugs"])
     post_cards = "\n".join(post_card(post) for post in posts[:3])
     writing_cards = "\n".join(writing_card(entry) for entry in writings[:3])
     research_intro = re.search(

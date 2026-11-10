@@ -24,6 +24,8 @@ python3 -m http.server 4000
 
 - Research and projects live in `_works/`.
 - Published blog posts live in `_posts/`.
+- Technical articles live in `_writings/`, with figures in `assets/writing/<article-slug>/`.
+- Writing uses the `writing` layout, ISO dates, a short `excerpt`, and `tags`; formulas use `\(...\)` and `\[...\]`.
 - Blog drafts live in `_drafts/`.
 - Site-ready shared images live in `assets/shared/`.
 - Site-ready project media live in `assets/works/<project>/`.

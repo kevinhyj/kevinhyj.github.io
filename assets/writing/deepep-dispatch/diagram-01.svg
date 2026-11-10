@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg aria-label="When counting and moving happen in V1 normal, V1 low-latency and V2" role="img" style="background:#fff;width:100%;height:auto;display:block" viewBox="0 0 720 312" xmlns="http://www.w3.org/2000/svg"><style>:root{--text:#171717;--secondary:#767676;--background:#fff;--quiet-line:#e6e6e1;--technical:#4d74a8;--reflection:#d95f49;--text-faint:#8a8a8a;--panel:#f7f7f4;--surface:#f7f7f4}</style>
+<style>
+.dd1-title{fill:var(--text);font-size:15px;font-weight:500}
+.dd1-row{fill:var(--secondary);font-size:13px;font-style:italic}
+.dd1-count{fill:var(--note-bg);stroke:var(--technical);stroke-width:1.3}
+.dd1-move{fill:var(--technical)}
+.dd1-idle{fill:var(--quiet-line)}
+.dd1-ct{fill:var(--text);font-size:13px}
+.dd1-mt{fill:var(--background);font-size:13px}
+.dd1-it{fill:var(--secondary);font-size:13px;font-style:italic}
+.dd1-wall{stroke:var(--reflection);stroke-width:1.5;stroke-dasharray:5 4}
+.dd1-wt{fill:var(--reflection);font-size:12.5px;font-style:italic}
+</style>
+<text class="dd1-title" x="0" y="15">V1 normal: count first, then move</text>
+<text class="dd1-row" x="0" y="43">count</text>
+<rect class="dd1-count" height="26" rx="4" width="104" x="56" y="26"></rect>
+<text class="dd1-ct" text-anchor="middle" x="108" y="44">layout kernel</text>
+<rect class="dd1-count" height="26" rx="4" width="104" x="164" y="26"></rect>
+<text class="dd1-ct" text-anchor="middle" x="216" y="44">notify kernel</text>
+<rect class="dd1-count" height="26" rx="4" width="128" x="272" y="26"></rect>
+<text class="dd1-ct" text-anchor="middle" x="336" y="44">CPU waits, allocates</text>
+<text class="dd1-row" x="0" y="75">move</text>
+<rect class="dd1-move" height="26" rx="4" width="316" x="404" y="58"></rect>
+<text class="dd1-mt" text-anchor="middle" x="562" y="76">data kernel writes each record to its final row</text>
+<text class="dd1-title" x="0" y="117">V1 low-latency: move and count together, send the count last</text>
+<text class="dd1-row" x="0" y="145">count</text>
+<rect class="dd1-count" height="26" rx="4" width="228" x="56" y="128"></rect>
+<text class="dd1-ct" text-anchor="middle" x="170" y="146">last warp scans top-k</text>
+<rect class="dd1-count" height="26" rx="4" width="92" x="288" y="128"></rect>
+<text class="dd1-ct" text-anchor="middle" x="334" y="146">send count</text>
+<text class="dd1-row" x="0" y="177">move</text>
+<rect class="dd1-move" height="26" rx="4" width="228" x="56" y="160"></rect>
+<text class="dd1-mt" text-anchor="middle" x="170" y="178">data warps put records</text>
+<rect class="dd1-idle" height="26" rx="4" width="176" x="288" y="160"></rect>
+<text class="dd1-ct" text-anchor="middle" x="376" y="178">in flight: the NIC moves</text>
+<rect class="dd1-move" height="26" rx="4" width="252" x="468" y="160"></rect>
+<text class="dd1-mt" text-anchor="middle" x="594" y="178">see the count, then copy and compact</text>
+<text class="dd1-title" x="0" y="219">V2: move and count in parallel, a barrier decides arrival</text>
+<text class="dd1-row" x="0" y="247">count</text>
+<rect class="dd1-count" height="26" rx="4" width="344" x="56" y="230"></rect>
+<text class="dd1-ct" text-anchor="middle" x="228" y="248">notify warps: count, exchange, publish</text>
+<text class="dd1-row" x="0" y="279">move</text>
+<rect class="dd1-move" height="26" rx="4" width="344" x="56" y="262"></rect>
+<text class="dd1-mt" text-anchor="middle" x="228" y="280">dispatch warps put records</text>
+<line class="dd1-wall" x1="412" x2="412" y1="226" y2="292"></line>
+<text class="dd1-wt" text-anchor="middle" x="412" y="304">end barrier</text>
+<rect class="dd1-move" height="26" rx="4" width="296" x="424" y="262"></rect>
+<text class="dd1-mt" text-anchor="middle" x="572" y="280">copy epilogue places rows using prefix sums</text>
+</svg>

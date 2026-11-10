@@ -1,0 +1,297 @@
+---
+layout: writing
+title: "Fusing Indexer Scoring and Exact Top-k for DeepSeek-V3.2"
+date: 2026-10-15
+excerpt: "An H20 case study in overlapping Indexer scoring with exact selection: sampled filtering, warp specialization, performance attribution, and end-to-end validation."
+description: "An H20 case study in overlapping Indexer scoring with exact selection: sampled filtering, warp specialization, performance attribution, and end-to-end validation."
+tags:
+  - "GPU Kernels"
+  - "Sparse Attention"
+math: true
+---
+
+<details class="writing-toc" open=""><summary>On this page</summary><ul><li><a href="#tldr">At a glance</a></li><li><a href="#1-introduction">1. Start with the end-to-end bottleneck</a></li><li><a href="#2-background-hardware-and-arithmetic-intensity">2. Establish the hardware cost model</a></li><li><a href="#3-exact-top-k-make-selection-keep-up-first">3. Make exact selection fast enough to overlap</a></li><li><a href="#4-design-of-the-fused-operator">4. Build the producer–consumer pipeline</a></li><li><a href="#5-how-far-from-the-ceiling">5. Attribute the gains and measure the remaining gap</a></li><li><a href="#6-evaluation">6. Validate from operator latency to TTFT</a></li><li><a href="#7-lessons-where-expectation-and-measurement-disagreed">7. Lessons from controlled interventions</a></li><li><a href="#8-limitations">8. Workloads beyond the measured operating point</a></li><li><a href="#9-related-work">9. Related implementations</a></li><li><a href="#10-conclusion">10. The optimization target after fusion</a></li><li><a href="#appendix-a-reproduction">Appendix A: Reproduction</a></li><li><a href="#appendix-b-timing-scopes">Appendix B: Timing scopes</a></li></ul></details>
+<blockquote>
+<p>Code: <a href="https://github.com/EdgePro001/FusedIndexTopK">EdgePro001/FusedIndexTopK</a> (measurements use <a href="https://github.com/EdgePro001/FusedIndexTopK/releases/tag/v0.3.0">v0.3.0</a>, commit <code>05b44daa</code>).
+This analysis covers only the prefill-side operator work. Every number comes from raw experimental results and was checked by a script.</p>
+</blockquote>
+<h2 id="tldr">At a glance</h2>
+<ul>
+<li>This case study examines a fused operator for DeepSeek-V3.2’s Indexer on H20. The Indexer scores every history token and keeps the 2048 highest; the usual implementation writes the full score matrix to device memory and reads it back to select. The fused operator performs scoring and selection in one kernel, with exactly the same result (exact top-k).</li>
+<li><strong>The gain comes from two sources: scoring and selection now overlap, and the score matrix no longer goes through device memory.</strong> On H20 the scoring itself is compute-bound, so the saved write and read-back of the score matrix is about 2.7% of the unfused time at 128K; the larger part comes from overlap. The first fused version already removed that traffic, yet it was slower than the unfused one because scoring stopped to wait for selection; only after double buffering let the two run at the same time did it clearly beat the unfused pipeline.</li>
+<li><strong>At long context, the operator is close to H20’s compute limit.</strong> At 160K the main kernel reaches 95.2% of FP8 peak, and deleting all selection work would make it only 0.31% faster. Short contexts and very few queries still leave room.</li>
+<li><strong>In the full model, time to first token (TTFT) drops as well, and more so for longer inputs.</strong> Replacing only the prefill Indexer inside vLLM lowers TTFT by 0.19% at 16K and 1.64% at 128K, the same order of magnitude as “Indexer share × operator saving”. The operator itself is 1.04× to 1.16× faster than DeepGEMM + DeepSelect on real inputs.</li>
+</ul>
+<h2 id="1-introduction">1. Start with the end-to-end bottleneck</h2>
+<h3 id="11-the-problem">1.1 The problem</h3>
+<p>DSA scores tokens as</p>
+<div class="math-display">\[I_{t,s} = \sum_{j=1}^{64} w_{t,j} \cdot \mathrm{ReLU}\!\left(\mathbf{q}_{t,j} \cdot \mathbf{k}_{s}\right)\]</div>
+<p>where <span class="math-inline">\(t\)</span> is the query position, <span class="math-inline">\(s\)</span> a history token, and <span class="math-inline">\(j\)</span> an Indexer head.</p>
+<p>Each query <span class="math-inline">\(t\)</span> scores every valid history token <span class="math-inline">\(s\)</span> and passes the K=2048 highest-scoring tokens to sparse MLA. The main attention therefore grows only with K, but Indexer scoring still grows with history length, and the total scoring work of a causal prefill is quadratic.</p>
+<p>Table 1 attributes cost in native vLLM on a real corpus: six full input lengths from the same normal-A input pack, with Nsight Systems attributing kernels to the Indexer’s scoring and top-k through NVTX ranges.</p>
+<div aria-label="Data table 1" class="writing-table-scroll" role="region" tabindex="0"><table><thead><tr><th align="right">Full input length</th><th align="right">Indexer cumulative GPU time (ms)</th><th align="right">Non-communication kernel time (ms)</th><th align="right">Share</th></tr></thead><tbody><tr><td align="right">8K</td><td align="right">291.1</td><td align="right">5375.6</td><td align="right">5.42%</td></tr><tr><td align="right">16K</td><td align="right">1105.2</td><td align="right">11492.2</td><td align="right">9.62%</td></tr><tr><td align="right">32K</td><td align="right">4236.8</td><td align="right">25244.8</td><td align="right">16.78%</td></tr><tr><td align="right">64K</td><td align="right">16703.2</td><td align="right">58884.8</td><td align="right">28.37%</td></tr><tr><td align="right">128K</td><td align="right">66721.3</td><td align="right">151246.2</td><td align="right">44.11%</td></tr><tr><td align="right">~160K</td><td align="right">104917.9</td><td align="right">210734.2</td><td align="right">49.79%</td></tr></tbody></table></div>
+<p><em>Table 1: Indexer work share in native vLLM. 6×H20, TP2 / PP3, eager, concurrency 1, chunked prefill 8192. The denominator is the sum of kernel time over six GPUs, not TTFT, so Amdahl’s law cannot be applied to it directly.</em></p>
+<p>The usual implementation has two steps: a DeepGEMM scoring kernel writes the <span class="math-inline">\([Q, N]\)</span> FP32 score matrix, and a separate top-k kernel reads it back. For Q=4096 and N=131072, the score matrix is 2 GiB and one write plus one read move 4 GiB, while the final int32 index output is only 32 MiB.</p>
+<h3 id="12-goals-and-constraints">1.2 Goals and constraints</h3>
+<ul>
+<li><strong>Exact semantics</strong>: output the K highest-scoring indices of every row; ties may resolve to any valid index; no approximation in exchange for speed.</li>
+<li><strong>No intermediate matrix</strong>: filter scores on chip as they are produced; the normal path never writes the full score matrix back.</li>
+<li><strong>Overlap selection with scoring</strong>: top-k should never make the Tensor Cores wait.</li>
+</ul>
+<h3 id="13-contributions">1.3 Design and validation</h3>
+<ol>
+<li><strong>An exact top-k that pipelines well</strong>: estimate a filtering threshold by sampling, do only “compare + append” over the full row, then find the <span class="math-inline">\(K\)</span>-th largest score in the small candidate set with radix select. A “count is sufficient + set is complete” certificate decides whether the fast path is valid; failures go to exact repair (Section 3).</li>
+<li><strong>A warp-specialized fused operator</strong>: TMA, Math and TopK warps each have one job, and a ready / free double buffer overlaps them across queries. Four further inefficiencies are then removed in turn: candidate-write contention, scanning empty slots, whole-row recomputation after overflow, and scheduling tails (Section 4).</li>
+<li><strong>Attribution by intervention</strong>: a Math-only control, SM-assignment traces and CTA-count interventions tie each gain to a specific mechanism and rule out several plausible but wrong explanations (Sections 5 and 7).</li>
+<li><strong>Validation from operator to model</strong>: freeze a public release, time the complete operator on 240 real activations, measure TTFT inside vLLM, and check that the two agree in magnitude (Section 6).</li>
+</ol>
+<p>The matrix-computation core (TMA loads, WGMMA instructions, SMEM descriptors and swizzle) comes from DeepGEMM; radix select and warp collectives are established techniques. This project’s work is the candidate layout, on-chip producer–consumer synchronization, capacity recovery and shape scheduling needed to combine the two, plus evidence-driven performance validation.</p>
+<h2 id="2-background-hardware-and-arithmetic-intensity">2. Establish the hardware cost model</h2>
+<h3 id="21-hardware">2.1 Hardware</h3>
+<p>All experiments run on NVIDIA <strong>H20-3e</strong>:</p>
+<ul>
+<li>78 SMs, each with up to 233472 B (228 KiB) of SMEM and 64 resident warps;</li>
+<li>FP8 dense spec peak of 296 TFLOPS; 141 GB of HBM3e at 4.8 TB/s;</li>
+<li>a compute-to-bandwidth ridge point of about <span class="math-inline">\(296 \div 4.8 \approx\)</span> <strong>62 FLOP/B</strong>.</li>
+</ul>
+<p>H20 has roughly one seventh of H100’s compute but higher bandwidth (3.35 TB/s on H100 SXM), so many computations that are memory-bound on H100 become compute-bound on H20.</p>
+<h3 id="22-indexer-scoring-is-compute-bound">2.2 Indexer scoring is compute-bound</h3>
+<p>Scoring one key against one query row means a 128-dimensional dot product for each of 64 heads, i.e. <span class="math-inline">\(2 \times 64 \times 128 = 16384\)</span> FLOP. One key costs a 128 B FP8 vector plus a 4 B scale, 132 B in total. Hence</p>
+<div class="math-display">\[\text{intensity} \approx \frac{16384\ \text{FLOP}}{132\ \text{B}} \approx 124\ \text{FLOP/B} \;&gt;\; \text{ridge}\ 62\ \text{FLOP/B}\]</div>
+<p>This is a conservative lower bound that assumes each key is used by a single query row. In prefill a key is reused by many query rows, so the real HBM intensity is higher. All 64 heads share one key (MQA), which is the root cause of the high intensity.</p>
+<p><strong>This sets the optimization target.</strong> At 128K, writing and reading back the 4 GiB score matrix takes about 0.9 ms at 4.8 TB/s, while the unfused pipeline takes 33.738 ms in total (Table 11), so this traffic is about 2.7% of it. The main gain of fusion therefore cannot come from saving bandwidth; it has to come from <strong>no longer running top-k serially after scoring</strong>. The version trajectory in Section 5 confirms this.</p>
+<h3 id="23-problem-definition">2.3 Problem definition</h3>
+<ul>
+<li><strong>Input</strong>: FP8 Q <span class="math-inline">\([Q, 64, 128]\)</span> and KV <span class="math-inline">\([N, 128]\)</span> (each with scales), head weights <span class="math-inline">\([Q, 64]\)</span>, and each row’s valid range <span class="math-inline">\([k_{\text{start}}, k_{\text{end}})\)</span>.</li>
+<li><strong>Output</strong>: K=2048 int32 indices per row, not required to be sorted by score.</li>
+</ul>
+<p>Exactness is checked as follows:</p>
+<ul>
+<li>indices lie in the valid range and are unique;</li>
+<li>the K selected scores, sorted, equal the true top-K scores element by element;</li>
+<li>under ties, different implementations may pick different valid indices.</li>
+</ul>
+<h2 id="3-exact-top-k-make-selection-keep-up-first">3. Make exact selection fast enough to overlap</h2>
+<p>The first requirement for fusion is a selection stage that can keep pace with the scorer. If selection falls behind, candidates accumulate and the Math warps stall. The standalone study therefore begins with exact top-k on full score matrices, using Q=4096 and K=2048.</p>
+<h3 id="31-counterexample-online-maintenance">3.1 Counterexample: online maintenance</h3>
+<p>The most direct idea is to maintain candidates while scanning, based on <span class="math-inline">\(\mathrm{TopK}(A \cup B) = \mathrm{TopK}\big(\mathrm{TopK}(A) \cup B\big)\)</span>.</p>
+<p><strong>Version 1: each thread keeps a top-16 in registers.</strong> Every accepted value forces a rescan of the local array to find the new minimum. NCU at N=128K:</p>
+<ul>
+<li>SM throughput 90.79%, DRAM throughput only 4.19%;</li>
+<li>on average only 14.79 / 32 threads of a warp are active;</li>
+<li>of 3.125B executed instructions, recomputing the minimum is 55.4% and dynamic slot replacement 25.3%, so maintenance is <strong>80.7%</strong>;</li>
+<li>10.233 ms, versus 2.834 ms for FlashInfer.</li>
+</ul>
+<p><strong>Version 2: a min-heap in SMEM.</strong> Maintenance drops to <span class="math-inline">\(O(\log L)\)</span>, and input reads become warp-contiguous:</p>
+<ul>
+<li>executed instructions halve to 1.565B, and registers drop from 64 to 32 per thread;</li>
+<li>but heap maintenance is still <strong>68.8%</strong> of instructions, and 128K takes 4.220 ms, still slower than FlashInfer’s 2.833 ms in the same campaign;</li>
+<li>the candidate heap needs 128 KiB of SMEM per CTA, so an SM holds only one CTA and occupancy stays near 50%.</li>
+</ul>
+<p>Lesson: as long as scanning is coupled to online maintenance, lowering the complexity does not remove the maintenance itself.</p>
+<h3 id="32-sampled-threshold-turn-maintenance-into-filtering">3.2 Sampled threshold: turn maintenance into filtering</h3>
+<p>Before scanning, each query estimates a fixed filtering threshold <span class="math-inline">\(\tau\)</span>:</p>
+<ol>
+<li><strong>Estimate the threshold</strong>: sample about 0.5% of tokens spread across the row and estimate <span class="math-inline">\(\tau\)</span> from their distribution, targeting about 4096 candidates, twice <span class="math-inline">\(K\)</span>, to absorb sampling error.</li>
+<li><strong>Filter the full row</strong>: scan the whole row with <span class="math-inline">\(\tau\)</span> fixed and append every element with <span class="math-inline">\(\text{score} \ge \tau\)</span> to the candidate set <span class="math-inline">\(C\)</span>. The scan only compares, counts and writes; there is no ordered state to maintain.</li>
+<li><strong>Select exactly</strong>: run four 8-bit radix passes over <span class="math-inline">\(C\)</span> to find the exact <span class="math-inline">\(K\)</span>-th largest score <span class="math-inline">\(\theta\)</span>, then emit by <span class="math-inline">\(\theta\)</span>.</li>
+</ol>
+<p><strong>Correctness certificate.</strong> Suppose <span class="math-inline">\(C = \{(\text{score}, \text{index}) : \text{score} \ge \tau\}\)</span> is stored completely and <span class="math-inline">\(K \le |C| \le \text{capacity}\)</span>. Then the row’s <span class="math-inline">\(K\)</span>-th largest score is <span class="math-inline">\(\ge \tau\)</span>, no element below the threshold can enter the top-k, and therefore</p>
+<div class="math-display">\[\mathrm{TopK}(\text{row}) = \mathrm{TopK}(C)\]</div>
+<p>The fast path fails in exactly two cases:</p>
+<ul>
+<li><strong>underflow</strong>: <span class="math-inline">\(|C| &lt; K\)</span>, the threshold was too high;</li>
+<li><strong>overflow</strong>: <span class="math-inline">\(|C|\)</span> exceeds on-chip capacity, because the threshold was too low or there are too many ties.</li>
+</ul>
+<p>Both go to exact repair. <strong>Sampling affects only whether the fast path succeeds, never whether the answer is exact.</strong></p>
+<p>The radix part maps floating-point scores to order-preserving 32-bit integers and counts 256 buckets per pass from the high byte to the low byte. The remaining rank at the end is exactly “how many elements equal to <span class="math-inline">\(\theta\)</span> still need to be taken”, so no sort is required.</p>
+<p>Effect: at 128K, time drops from 4.2200 ms for the heap version to 2.7478 ms. Paired NCU shows executed instructions 1.565B → 1.007B and shared loads 196.89M → 7.87M with unchanged occupancy: the gain comes from no longer maintaining a heap.</p>
+<h3 id="33-resource-thresholds-residency-follows-thresholds-not-usage">3.3 Resource thresholds: residency follows thresholds, not usage</h3>
+<p>Each candidate stores a score and an index, 8 B in total. Cutting candidate capacity from 16384 to 14080 and constraining register allocation:</p>
+<ul>
+<li>per-CTA SMEM drops from 133760 B to 115328 B; two CTAs need 230656 B, below the 233472 B per SM;</li>
+<li>resident CTAs per SM go from 1 to 2, and achieved occupancy from 49.77% to 98.66%;</li>
+<li>on real Layer-0 inputs at N=128K, top-k drops from 2.4819 ms to 1.9082 ms (−23.1%).</li>
+</ul>
+<p><strong>Counterexample</strong>: shrinking SMEM further by storing only indices (68224 B). A 1024-thread CTA already caps residency at 2, so no parallelism is gained, while radix select must repeatedly fetch scores from device memory. All eight real test points got slower by 2.60%–13.54%.</p>
+<h3 id="34-instruction-level-optimizations">3.4 Instruction-level optimizations</h3>
+<ul>
+<li><strong>Batched slot reservation</strong>: each thread ballots its four items separately, then requests space with one shared atomic. Single-variable comparison: 128K top-k 1.9038 → 1.7474 ms (−8.21%).</li>
+<li><strong>Vector loads</strong>: each thread reads four contiguous elements with one <code>float4</code> instead of four elements 1024 apart. Global load instructions drop by about 74.6% while L1 sectors and DRAM bytes are unchanged; 128K top-k 1.7259 → 1.6493 ms (−4.44%).</li>
+</ul>
+<h3 id="35-stage-result">3.5 Stage result</h3>
+<div aria-label="Data table 2" class="writing-table-scroll" role="region" tabindex="0"><table><thead><tr><th align="right">N</th><th align="right">FlashInfer (ms)</th><th align="right">Our top-k (ms)</th><th align="right">Speedup</th></tr></thead><tbody><tr><td align="right">16K</td><td align="right">0.660</td><td align="right">0.647</td><td align="right">2%</td></tr><tr><td align="right">64K</td><td align="right">1.506</td><td align="right">1.149</td><td align="right">31%</td></tr><tr><td align="right">128K</td><td align="right">2.494</td><td align="right">1.651</td><td align="right">51%</td></tr><tr><td align="right">160K</td><td align="right">3.219</td><td align="right">1.852</td><td align="right">74%</td></tr></tbody></table></div>
+<p><em>Table 2: Standalone top-k against FlashInfer FilteredTopK. Real Layer-0 scores, mean of two inputs per N; speedup = FlashInfer ÷ ours − 1. FlashInfer is a single same-protocol comparison in the same block, covering Layer 0 only; deeper layers have different score distributions, so this is not a claim of across-the-board superiority.</em></p>
+<p>Top-k now keeps up, but a standalone top-k cannot change the structure “write the score matrix, read it back, run the two stages serially”.</p>
+<h2 id="4-design-of-the-fused-operator">4. Build the producer–consumer pipeline</h2>
+<h3 id="41-roles-and-compute-mapping">4.1 Roles and compute mapping</h3>
+<div aria-label="Data table 3" class="writing-table-scroll" role="region" tabindex="0"><table><thead><tr><th>Role</th><th>Threads</th><th>Responsibility</th></tr></thead><tbody><tr><td>TMA</td><td>1 warp</td><td>asynchronous Q and KV tile loads</td></tr><tr><td>Math</td><td>8 warps (2 warpgroups)</td><td>WGMMA scoring, head reduction, filtering candidates by <span class="math-inline">\(\tau\)</span></td></tr><tr><td>TopK</td><td>3 warps</td><td>exact radix selection, index output</td></tr></tbody></table></div>
+<p><em>Table 3: Roles inside one CTA: 384 threads, one CTA per SM. TMA and TopK share one 128-thread warpgroup.</em></p>
+<p>A KV tile has 128 rows, 64 per warpgroup. The WGMMA shape is <code>m64nNk32</code>:</p>
+<ul>
+<li>m = 64 KV rows;</li>
+<li>n = BLOCK_Q × 64 heads;</li>
+<li>k = 32, so the 128-wide head dimension takes 4 instructions along k.</li>
+</ul>
+<p>Each warp owns 16 KV rows, and the head reduction happens in registers: each lane first sums its own 16 columns, then two <code>shfl_xor</code> steps sum across 4 lanes. Each warp therefore ends up with exactly 16 final scores per query and filters them with a single ballot. <strong>Scores are reduced and filtered in place in registers, never written out</strong>; this is what makes filtering in the epilogue possible.</p>
+<p>Between TMA and WGMMA, the design retains DeepGEMM’s stage ring: a full / empty barrier pair per stage plus a phase bit to tell rounds apart. The stock-DeepGEMM control measures this part of the pipeline: going from 1 to 2 KV stages lowers latency by 13.1% (16K) / 24.3% (128K), a third stage brings nothing, and the Tensor instruction family is about 95% active. This level is already near peak; the remaining room is in the new level added behind it, Math ↔ TopK.</p>
+<h3 id="42-double-buffering-overlapping-math-and-topk-across-queries">4.2 Double buffering: overlapping Math and TopK across queries</h3>
+<p>The first version with candidates and top-k in the same CTA took 6.616 ms on a real N16K input. Re-measured on the same input, its effective throughput is 147 TFLOPS, <strong>lower than the unfused pipeline’s 176</strong>. The reason: after a batch of queries, Math had to wait for TopK to finish before writing the next batch. Removing the round trip through device memory also removed the parallelism.</p>
+<p>The fix gives candidates two slots. Query batch <span class="math-inline">\(b\)</span> uses slot <span class="math-inline">\(b \bmod 2\)</span> with phase bit <span class="math-inline">\(\lfloor b/2 \rfloor \bmod 2\)</span>:</p>
+<ul>
+<li><strong>ready barrier</strong> (arrived on by the 256 Math threads): Math has written a batch of candidates; TopK may start.</li>
+<li><strong>free barrier</strong> (arrived on by the 96 TopK threads): TopK has finished reading; Math may overwrite the slot. Math’s first wait on free uses the opposite phase, so both slots start out writable.</li>
+</ul>
+<div aria-label="Data table 4" class="writing-table-scroll" role="region" tabindex="0"><table><thead><tr><th>Metric</th><th align="right">Serial</th><th align="right">Overlapped across queries</th></tr></thead><tbody><tr><td>Complete operator time</td><td align="right">5.498 ms</td><td align="right">3.848 ms (−30.0%)</td></tr><tr><td>Eligible warps / scheduler</td><td align="right">0.269</td><td align="right">0.446</td></tr><tr><td>Issue slots busy</td><td align="right">24.32%</td><td align="right">35.34%</td></tr><tr><td>Achieved occupancy</td><td align="right">18.71%</td><td align="right">18.20%</td></tr></tbody></table></div>
+<p><em>Table 4: Ablation with the same layout, changing only whether Math waits for TopK. H20, Q4096 / N16K, synthetic input, sampling and repair included.</em></p>
+<p>Occupancy is unchanged while more warps can issue: <strong>the gain comes from less waiting, not from higher residency</strong>.</p>
+<h3 id="43-candidate-layout-warp-private-segments">4.3 Candidate layout: warp-private segments</h3>
+<p>Each row’s candidate area is split into 8 segments, one per Math warp, with 736 entries each and 5888 per row. Each warp keeps its segment count in registers with ballot and popcount and computes write positions directly, without atomically allocating from a counter shared by the whole CTA.</p>
+<p>The cost is that <strong>segments cannot borrow capacity from each other</strong>: once a segment is full, the row counts as overflowed even if other segments still have room. Merging each warp’s two former 368-entry segments into one 736-entry segment lowered complete-operator time by 0.04%–4.37% on four real 160K inputs.</p>
+<h3 id="44-scanning-only-the-actual-counts">4.4 Scanning only the actual counts</h3>
+<p>TopK used to walk the whole reserved capacity and test each position for validity. After switching to iterate over each segment’s actual count (Q4096 / N16K):</p>
+<ul>
+<li>TopK’s time for two rows dropped from 167166 to 123213 cycles, about 26% faster;</li>
+<li>but the complete operator only went from 3.8556 ms to 3.8135 ms (−1.09%);</li>
+<li>Math’s wait for a free buffer stayed at 102 cycles, and TopK’s wait for ready grew from 70643 to 114362 cycles.</li>
+</ul>
+<p><strong>Interpretation</strong>: Math was hardly waiting for TopK in the first place; Math sets the pace. TopK is already hidden by the pipeline, and the remaining losses are in the exception path and task scheduling.</p>
+<h3 id="45-overflow-spill-area-avoiding-whole-row-recomputation">4.5 Overflow spill area: avoiding whole-row recomputation</h3>
+<p>On the real 160K development set only 0.664% (544 / 81920) of rows overflowed, yet only 6 of 20 inputs beat DeepGEMM + DeepSelect, because an overflowing row discarded its candidates and rescored the whole row. The failure classification separates two cases:</p>
+<div aria-label="Data table 5" class="writing-table-scroll" role="region" tabindex="0"><table><thead><tr><th>Failure cause (544 rows in total)</th><th align="right">Rows</th></tr></thead><tbody><tr><td>One segment overflowed, row total within capacity</td><td align="right">449</td></tr><tr><td>Row total exceeded capacity</td><td align="right">95</td></tr><tr><td>Fewer than K candidates</td><td align="right">0</td></tr></tbody></table></div>
+<p><em>Table 5: Failure classification on the 160K development set.</em></p>
+<p>The 449 rows are exactly the cost of “segments cannot borrow” from Section 4.3. The fix keeps the SMEM normal path and writes the few overflowing candidates to a spill area in device memory (256 entries per segment); TopK merges both sources and completes the exact selection directly. If the spill area also fills, or there are fewer than K candidates, the original exact repair still applies.</p>
+<div aria-label="Data table 6" class="writing-table-scroll" role="region" tabindex="0"><table><thead><tr><th>Scheme</th><th align="right">Rows recomputed</th><th align="right">Complete time</th></tr></thead><tbody><tr><td>Discard and recompute</td><td align="right">544</td><td align="right">42.072 ms</td></tr><tr><td>Keep and merge</td><td align="right">0</td><td align="right">40.387 ms</td></tr><tr><td>DeepGEMM + DeepSelect</td><td align="right">—</td><td align="right">41.830 ms</td></tr></tbody></table></div>
+<p><em>Table 6: Q4096 / N160K, 5 layers × 4 real inputs. The 6 cases without overflow changed by only about 0.011%.</em></p>
+<p>The development set went from 6/20 to 20/20 wins. On an independent holdout not used during development (five layers, six native N, 120 inputs), 16K–160K won 100/100 while 8K won 0/20 (4.26% slower on average). The 8K gap was closed by the later BLOCK_Q=1 and output-path changes; the public release is also faster than the baseline at 8K (Table 11).</p>
+<h3 id="46-one-query-per-batch-balancing-work-across-sms">4.6 One query per batch: balancing work across SMs</h3>
+<p>A kernel finishes when its busiest SM finishes. Queries are handed to SMs in tasks of BLOCK_Q rows: with Q=512 and 78 SMs, that is 6.56 rows on average. With BLOCK_Q=2 every SM gets an even number of rows, and <code>%smid</code> / <code>%globaltimer</code> traces show 22 SMs taking 8 rows. With BLOCK_Q=1 the busiest SM takes only 7 rows (44 SMs).</p>
+<ul>
+<li><strong>Effect</strong>: Q512 / 128K history (synthetic causal input), complete time 5.006 → 4.409 ms (−11.9%).</li>
+<li><strong>Cost</strong>: WGMMA goes from m64n128k32 to m64n64k32, so dynamic QGMMA instructions double from 8.41M to 16.82M and TMA loads from 0.53M to 1.05M.</li>
+</ul>
+<p><strong>Ruling out the wrong explanation.</strong> Tensor-family activity rises from 79.6% to 91.4%, which looks like “narrower MMAs are more efficient”. But the absolute Tensor active cycles are identical in both versions; the activity rises only because the denominator shrank, and per-query Math cycles are unchanged (1.058M → 1.060M).</p>
+<p><strong>Intervention.</strong> Keeping inputs and kernels fixed, only the number of persistent CTAs is changed:</p>
+<div aria-label="Data table 7" class="writing-table-scroll" role="region" tabindex="0"><table><thead><tr><th align="right">CTAs</th><th align="right">2 queries per batch</th><th align="right">1 query per batch</th></tr></thead><tbody><tr><td align="right">156</td><td align="right">8 rows · 4.807 ms</td><td align="right">7 rows · 4.207 ms</td></tr><tr><td align="right">128</td><td align="right">8 rows · 4.812 ms</td><td align="right">8 rows · 4.787 ms</td></tr><tr><td align="right">104</td><td align="right">8 rows · 4.822 ms</td><td align="right">10 rows · 5.962 ms</td></tr><tr><td align="right">96</td><td align="right">10 rows · 5.975 ms</td><td align="right">10 rows · 5.967 ms</td></tr></tbody></table></div>
+<p><em>Table 7: Rows on the busiest SM and main-kernel time.</em></p>
+<p>Time depends only on the rows of the busiest SM, not on rows per batch:</p>
+<div class="math-display">\[T_{\text{kernel}} \approx 0.6\ \text{ms} \times \max_{\text{SM}} (\text{rows}), \qquad \frac{4.207}{4.807} = 0.875 = \frac{7}{8}\]</div>
+<p>Over 420 real inputs, the geometric mean of Q2 ÷ Q1 is about 1.77× for Q=8 and Q=64, about 1.15× for Q=512 and 1.02×–1.04× for Q≥1024, with identical final index sets throughout.</p>
+<h2 id="5-how-far-from-the-ceiling">5. Attribute the gains and measure the remaining gap</h2>
+<h3 id="51-version-trajectory">5.1 Version trajectory</h3>
+<p>The version comparison re-runs the unfused pipelines and each fused design on the same real inputs under one timing protocol. This separates the effect of removing the intermediate matrix from the later gains due to overlap, candidate layout, capacity recovery, and scheduling.</p>
+<p>Effective throughput counts only the scoring that the causal mask actually requires, and time is the complete operator (sampling, main kernel and repair):</p>
+<div class="math-display">\[\text{effective throughput} = \frac{2 \cdot 64 \cdot 128 \cdot \sum_{t} \left(k_{\text{end}}(t) - k_{\text{start}}(t)\right)}{\text{complete operator time}}\]</div>
+<p><img alt="Figure 1" decoding="async" height="1410" loading="lazy" src="/assets/writing/fused-indexer-topk/roofline_eager_h20_3e_en.png" width="3930"/></p>
+<p><em>Figure 1: Roofline and version trajectory on H20-3e. Left: every version has the same arithmetic intensity (about 124 FLOP/B), in the compute-bound region right of the ridge at 62. Right: effective throughput on the same inputs with the same protocol (eager); hollow points are the unfused DeepGEMM + torch.topk, dotted lines DeepGEMM + DeepSelect.</em></p>
+<div aria-label="Data table 8" class="writing-table-scroll" role="region" tabindex="0"><table><thead><tr><th>Shape</th><th align="right">Unfused (torch.topk)</th><th>Fused versions</th><th align="right">Public v0.3.0</th><th align="right">DeepGEMM + DeepSelect</th></tr></thead><tbody><tr><td>Q4096 / N16K (1 input)</td><td align="right">176 (59%)</td><td>R17a 147 → R17b 251 → R17c 254 → R17f 255</td><td align="right"><strong>262 (88%)</strong></td><td align="right">226</td></tr><tr><td>Q4096 / N160K (20 inputs)</td><td align="right">199 (67%)</td><td>R17j 263 → R17k 267</td><td align="right"><strong>271 (92%)</strong></td><td align="right">259</td></tr><tr><td>Q512 / N128K (1 input)</td><td align="right">171 (58%)</td><td>R17k 220</td><td align="right"><strong>251 (85%)</strong></td><td align="right">217</td></tr></tbody></table></div>
+<p><em>Table 8a: Effective FP8 throughput (TFLOPS, eager); percentages are of the 296 TFLOPS spec peak. CUDA Graph differs from eager by only 1–2 TFLOPS.</em></p>
+<ul>
+<li><strong>Start</strong>: the unfused pipelines reach only 58%–67% of peak. They are compute-bound too; they are slow because scoring and top-k run serially.</li>
+<li><strong>The R17a dip</strong>: removing the intermediate matrix but making Math wait for TopK drops 176 to 147. Saving traffic is not the same as being fast.</li>
+<li><strong>The R17b jump</strong>: double-buffered overlap lifts it to 251, the largest step in the figure. <strong>The value of fusion is overlap.</strong></li>
+<li><strong>Small steps afterwards</strong>: the exception path (263 → 267 at 160K) and the scheduling tail (220 → 251 at Q512).</li>
+<li><strong>Ceiling</strong>: 160K reaches about 92% of peak. Against DeepGEMM + DeepSelect, the three shapes are about 1.16×, 1.05× and 1.15×.</li>
+</ul>
+<h3 id="52-math-only-control-how-much-selection-time-is-still-exposed">5.2 Math-only control: how much selection time is still exposed</h3>
+<p>The Math-only control retains the public kernel’s TMA loads, WGMMA, and barriers while removing score reduction, candidate generation, and top-k. The WGMMA accumulators are folded into a checksum that is written out, so the compiler cannot delete the matrix computation. NCU on Q4096 / H128K confirms that both versions execute identical dynamic QGMMA (68,190,208) and TMA load (4,265,984) instruction counts, while total SASS instructions drop by 85.4%.</p>
+<div aria-label="Data table 9" class="writing-table-scroll" role="region" tabindex="0"><table><thead><tr><th align="right">Q</th><th align="right">History</th><th align="right">Main-kernel speedup after removing all selection</th></tr></thead><tbody><tr><td align="right">8192</td><td align="right">128K</td><td align="right">0.20%</td></tr><tr><td align="right">4096</td><td align="right">128K</td><td align="right">0.31%</td></tr><tr><td align="right">4096</td><td align="right">24K</td><td align="right">1.64%</td></tr><tr><td align="right">512</td><td align="right">128K</td><td align="right">2.00%</td></tr><tr><td align="right">512</td><td align="right">8K</td><td align="right">21.75%</td></tr></tbody></table></div>
+<p><em>Table 9: Math-only control. Synthetic input, timed alternately with the unmodified version in the same rounds.</em></p>
+<p><strong>85% fewer instructions, only 0.31% less time</strong>: with long histories, the selection work is almost entirely off the critical path. Note that this number is “the selection time still exposed on the current matrix path”, not the cost of selection itself, and not an upper bound for every possible optimization. With short histories the matrix work cannot cover selection, and removing selection still saves 21.75%.</p>
+<h3 id="53-main-kernel-compute-utilization">5.3 Main-kernel compute utilization</h3>
+<div aria-label="Data table 10" class="writing-table-scroll" role="region" tabindex="0"><table><thead><tr><th align="right">Q</th><th align="right">N</th><th align="right">Effective TFLOPS</th><th align="right">Of peak</th><th align="right">SMs used</th><th align="right">TopK busy fraction</th></tr></thead><tbody><tr><td align="right">4096</td><td align="right">8K</td><td align="right">264</td><td align="right">89.1%</td><td align="right">78</td><td align="right">0.85</td></tr><tr><td align="right">4096</td><td align="right">16K</td><td align="right">273</td><td align="right">92.2%</td><td align="right">78</td><td align="right">0.43</td></tr><tr><td align="right">4096</td><td align="right">32K</td><td align="right">277</td><td align="right">93.5%</td><td align="right">78</td><td align="right">0.19</td></tr><tr><td align="right">4096</td><td align="right">64K</td><td align="right">279</td><td align="right">94.1%</td><td align="right">78</td><td align="right">0.09</td></tr><tr><td align="right">4096</td><td align="right">128K</td><td align="right">279</td><td align="right">94.4%</td><td align="right">78</td><td align="right">0.05</td></tr><tr><td align="right">4096</td><td align="right">160K</td><td align="right">282</td><td align="right">95.2%</td><td align="right">78</td><td align="right">0.04</td></tr><tr><td align="right">512</td><td align="right">128K</td><td align="right">261</td><td align="right">88.1%</td><td align="right">78</td><td align="right">0.05</td></tr><tr><td align="right">64</td><td align="right">128K</td><td align="right">220</td><td align="right">74.4%</td><td align="right">64</td><td align="right">0.04</td></tr><tr><td align="right">8</td><td align="right">128K</td><td align="right">28</td><td align="right">9.4%</td><td align="right">8</td><td align="right">0.04</td></tr></tbody></table></div>
+<p><em>Table 10: Public main kernel (sampling and repair excluded), real replay rows, fixed threshold, 20 timing groups. The six Q4096 rows come from one measurement (2026-10-13); the last three from an earlier one (2026-10-05). Shapes measured in both runs, Q4096 / N8K at 89.1% vs 88.7% and N32K at 93.5% in both, indicate run-to-run repeatability. TopK busy fraction = time TopK warps spend processing candidates ÷ (processing time + time waiting for candidates to become ready), from a separate instrumented launch; use it for trends only.</em></p>
+<p>At Q4096 all 78 SMs have work, and the main kernel rises from 89.1% at 8K to 95.2% at 160K. The last column explains why: at 8K the TopK warps spend 85% of their time processing candidates and barely keep up with scoring; from 64K on it is under 10%, and they mostly wait for Math to produce the next batch. This agrees with Section 5.2: the longer the history, the more matrix work each row has to cover selection.</p>
+<p>When Q is smaller than the SM count, per-query parallelism runs out: Q64 uses only 64 SMs and Q8 only 8, and an idle TopK cannot help because parallelism is the bottleneck. In the 2026-10-05 measurement, Q128 / Q256 (N128K) used all SMs yet reached only 75.1% / 76.8%: 128 and 256 rows do not divide evenly over 78 SMs, so the busiest SM processes one extra row, the scheduling tail of Section 4.6.</p>
+<p><strong>Summary</strong>: in the main regime of long context and large Q the pipeline is full and this approach is close to its ceiling; further large gains require doing less matrix work. The remaining limits are “short histories cannot hide selection” and “small Q lacks parallelism”.</p>
+<h2 id="6-evaluation">6. Validate from operator latency to TTFT</h2>
+<h3 id="61-setup">6.1 Setup</h3>
+<ul>
+<li><strong>Version under test</strong>: public release v0.3.0, commit <code>05b44daa14991d241de26162aa1bcb773cb6dafb</code>, built from a clean checkout and not modified during measurement.</li>
+<li><strong>Baselines</strong>: DeepGEMM (<code>7c95b14a</code>) scoring + DeepSelect (<code>0f03b687</code>) top-k, i.e. the unfused pipeline; native vLLM additionally in the end-to-end test.</li>
+<li><strong>Environment</strong>: NVIDIA H20-3e, PyTorch 2.10.0+cu130. B=1, 64 heads, dim 128, K=2048.</li>
+<li><strong>Inputs</strong>: 240 real activation replays from DeepSeek-V3.2 layers 0/15/30/45/60 at six lengths (8K–160K): 120 at Q4096 and 60 each at Q64 and Q512 (suffix slices of the original activations). 46 synthetic inputs are used only for shape and correctness checks.</li>
+<li><strong>Timing protocol</strong>: complete operator, i.e. sampling gather, sampling GEMM, threshold, fused main kernel and exact repair. 7 groups of CUDA events with the same inputs in rotated paired order; warm cache, no L2 flush. JIT, preparation and Graph capture are not timed. Eager and CUDA Graph are measured separately and Graph is reported. GPU clocks were not locked.</li>
+</ul>
+<h3 id="62-operator-performance">6.2 Operator performance</h3>
+<div aria-label="Data table 11" class="writing-table-scroll" role="region" tabindex="0"><table><thead><tr><th align="right">N</th><th align="right">Ours (ms)</th><th align="right">DeepGEMM + DeepSelect (ms)</th><th align="right">Speedup</th></tr></thead><tbody><tr><td align="right">8K</td><td align="right">1.795</td><td align="right">1.872</td><td align="right">1.04×</td></tr><tr><td align="right">16K</td><td align="right">3.685</td><td align="right">4.258</td><td align="right">1.16×</td></tr><tr><td align="right">32K</td><td align="right">7.722</td><td align="right">8.694</td><td align="right">1.13×</td></tr><tr><td align="right">64K</td><td align="right">15.761</td><td align="right">17.131</td><td align="right">1.09×</td></tr><tr><td align="right">128K</td><td align="right">31.912</td><td align="right">33.738</td><td align="right">1.06×</td></tr><tr><td align="right">160K</td><td align="right">39.836</td><td align="right">41.870</td><td align="right">1.05×</td></tr></tbody></table></div>
+<p><em>Table 11: Q4096 complete-operator time (CUDA Graph). Each N is the arithmetic mean of per-input medians over 20 inputs; speedup = baseline ÷ ours.</em></p>
+<div aria-label="Data table 12" class="writing-table-scroll" role="region" tabindex="0"><table><thead><tr><th align="right">Q</th><th align="right">Inputs</th><th align="right">vs DeepGEMM + DeepSelect (geometric mean)</th></tr></thead><tbody><tr><td align="right">64</td><td align="right">60</td><td align="right">1.561×</td></tr><tr><td align="right">512</td><td align="right">60</td><td align="right">1.125×</td></tr><tr><td align="right">4096</td><td align="right">120</td><td align="right">1.086×</td></tr></tbody></table></div>
+<p><em>Table 12: Geometric mean of per-case speedups by Q. 1.086× should not be read as “8.6% less time”.</em></p>
+<p>vLLM’s usual chunked-prefill budget is 8192 tokens, so Q8192 is a shape that really occurs. The real activations were captured with only 4096 queries each, so Q8192 exists only as synthetic input:</p>
+<div aria-label="Data table 13" class="writing-table-scroll" role="region" tabindex="0"><table><thead><tr><th align="right">N</th><th align="right">Ours (ms)</th><th align="right">DeepGEMM + DeepSelect (ms)</th><th align="right">Speedup</th></tr></thead><tbody><tr><td align="right">16K</td><td align="right">6.216</td><td align="right">7.356</td><td align="right">1.18×</td></tr><tr><td align="right">32K</td><td align="right">14.163</td><td align="right">16.274</td><td align="right">1.15×</td></tr><tr><td align="right">64K</td><td align="right">30.057</td><td align="right">32.800</td><td align="right">1.09×</td></tr><tr><td align="right">128K</td><td align="right">62.256</td><td align="right">65.133</td><td align="right">1.05×</td></tr><tr><td align="right">160K</td><td align="right">77.704</td><td align="right">81.474</td><td align="right">1.05×</td></tr></tbody></table></div>
+<p><em>Table 12b: Synthetic Q8192 (CUDA Graph), mean of the medians of two random seeds. Q8192 / N8K is not measured because some rows have fewer than K valid keys. Synthetic input does not replace real activations; it only confirms that the trend matches Q4096.</em></p>
+<ul>
+<li><strong>All</strong> 120 Q4096 inputs are faster than the unfused pipeline. The speedup shrinks as N grows, for the reason in Section 5.2: at long N both pipelines do the same matrix work, and only the intermediate matrix and the serial stage remain to separate them.</li>
+<li>The Q4096 conclusion is the same in eager mode (1.081×).</li>
+<li>Under Graph, the median coefficient of variation across repeat groups is 0.06%–0.12%.</li>
+</ul>
+<h3 id="63-correctness">6.3 Correctness</h3>
+<ul>
+<li>All 286 inputs (240 real and 46 synthetic) pass per-row bounds and uniqueness checks.</li>
+<li>An independent oracle (DeepGEMM scoring plus <code>torch.topk</code>) checks the first, middle and last row of each input as well as <strong>every</strong> row whose index set differs between implementations, comparing the sorted K scores element by element; 852 case-rows were audited on real inputs.</li>
+<li>On real Q4096, 10 rows failed the fast path (0.00203% of 491,520), all fixed by repair; there are no unresolved failures.</li>
+</ul>
+<p>These checks are not an independent oracle on every row, and they do not prove token-identical model generations.</p>
+<h3 id="64-end-to-end-ttft">6.4 End to end: TTFT</h3>
+<p><strong>Setup</strong>:</p>
+<ul>
+<li>One loaded DeepSeek-V3.2 in one vLLM process (vLLM 0.28.0); only the prefill Indexer is replaced and decode stays native.</li>
+<li>6×H20-3e, TP2 / PP3, eager, concurrency 1; FP8 weights, <code>fp8_ds_mla</code> KV cache, prefix cache off, chunked-prefill budget 8192.</li>
+<li>Two real inputs per length, 8 generated tokens per request. Implementations rotate in Williams order, 8 rounds per case.</li>
+<li>TTFT runs from request submission to the first non-empty token and includes scheduling, communication, adapter checks, sampling and repair.</li>
+</ul>
+<div aria-label="Data table 14" class="writing-table-scroll" role="region" tabindex="0"><table><thead><tr><th align="right">Input length</th><th align="right">Native vLLM</th><th align="right">DeepGEMM + DeepSelect</th><th align="right">Ours</th><th align="right">vs native</th></tr></thead><tbody><tr><td align="right">8K</td><td align="right">2.751</td><td align="right">2.762</td><td align="right">2.761</td><td align="right">fused path not invoked</td></tr><tr><td align="right">16K</td><td align="right">4.029</td><td align="right">4.086</td><td align="right">4.022</td><td align="right">−0.19%</td></tr><tr><td align="right">32K</td><td align="right">6.653</td><td align="right">6.773</td><td align="right">6.628</td><td align="right">−0.36%</td></tr><tr><td align="right">64K</td><td align="right">12.963</td><td align="right">13.220</td><td align="right">12.883</td><td align="right">−0.62%</td></tr><tr><td align="right">128K</td><td align="right">29.886</td><td align="right">30.433</td><td align="right">29.396</td><td align="right">−1.64%</td></tr></tbody></table></div>
+<p><em>Table 13: TTFT (seconds), mean of the two inputs’ medians. Per-case paired bootstrap 95% intervals are narrow (e.g. 1.0162× to 1.0169× at 128K), but they reflect only within-session repeatability; two inputs do not represent the corpus.</em></p>
+<ul>
+<li><strong>Native vLLM is a strong baseline</strong>: it already uses DeepGEMM scoring plus a dedicated prefill top-k, not <code>torch.topk</code>.</li>
+<li><strong>8K</strong>: early causal rows have fewer than K valid keys, so the adapter falls back to native for everything and there is no gain. Both implementations that go through the adapter are about 0.4% slower at 8K, which points to the adapter’s fixed overhead.</li>
+<li><strong>160K is not in the table</strong>: the original 160K inputs ran past the position range in the following decode phase, which native also reproduced, so they are excluded from the formal comparison.</li>
+<li>The 8 generated tokens are not always identical across implementations: exact top-k allows any choice among ties, which does not imply equal task quality.</li>
+</ul>
+<h3 id="65-magnitude-check">6.5 Magnitude check</h3>
+<p>The end-to-end gain should be roughly the Indexer’s share times the operator’s saving relative to native:</p>
+<div class="math-display">\[\Delta\text{TTFT} \approx \text{Indexer share} \times \text{saving vs native}\]</div>
+<div aria-label="Data table 15" class="writing-table-scroll" role="region" tabindex="0"><table><thead><tr><th align="right">Input length</th><th align="right">Native Indexer share</th><th align="right">Saving vs native</th><th align="right">Estimate</th><th align="right">Measured TTFT reduction</th></tr></thead><tbody><tr><td align="right">16K</td><td align="right">9.62%</td><td align="right">5.99%</td><td align="right">≈ 0.6%</td><td align="right">0.19%</td></tr><tr><td align="right">32K</td><td align="right">16.78%</td><td align="right">4.33%</td><td align="right">≈ 0.7%</td><td align="right">0.36%</td></tr><tr><td align="right">64K</td><td align="right">28.37%</td><td align="right">3.42%</td><td align="right">≈ 1.0%</td><td align="right">0.62%</td></tr><tr><td align="right">128K</td><td align="right">44.11%</td><td align="right">4.43%</td><td align="right">≈ 2.0%</td><td align="right">1.64%</td></tr></tbody></table></div>
+<p><em>Table 14: The saving is the reduction in Indexer GPU work of the fused version relative to native over the many Q/N shapes actually invoked, including sampling, repair and adapter checks.</em></p>
+<p>The two agree in magnitude and both grow with length. The measurement falls below the estimate for several reasons:</p>
+<ul>
+<li>the share is computed from summed kernel time over six GPUs, not the critical path;</li>
+<li>the first 8192-token chunk falls back to native, 122 such calls per request;</li>
+<li>TTFT also includes CPU scheduling, communication and adapter overhead.</li>
+</ul>
+<p>The end-to-end gain is therefore capped by the Indexer’s share.</p>
+<h2 id="7-lessons-where-expectation-and-measurement-disagreed">7. Lessons from controlled interventions</h2>
+<div aria-label="Data table 16" class="writing-table-scroll" role="region" tabindex="0"><table><thead><tr><th>Attempt</th><th>Expected</th><th>Measured</th><th>Lesson</th></tr></thead><tbody><tr><td>Heap maintenance</td><td><span class="math-inline">\(O(\log L)\)</span>, catch up with FlashInfer</td><td>Half the instructions, but 128K still 4.220 ms, slower than FlashInfer</td><td>Lower complexity does not remove maintenance</td></tr><tr><td>Index-only storage</td><td>Less SMEM, so faster</td><td>All eight test points 2.60%–13.54% slower</td><td>Residency follows thresholds, not usage</td></tr><tr><td>First on-chip fusion</td><td>No round trip, so faster</td><td>6.616 ms, slower than unfused (147 vs 176 TFLOPS)</td><td>Fusion must design who waits for whom</td></tr><tr><td>Scanning actual counts</td><td>TopK 26% faster, so overall clearly faster</td><td>Complete operator only 1.09% faster</td><td>TopK was already hidden by the pipeline</td></tr><tr><td>One query per batch</td><td>Narrower MMAs are more efficient</td><td>Per-query cycles unchanged; the busiest SM does one row less</td><td>Metrics need intervention experiments</td></tr><tr><td>Hand-cut instructions</td><td>Fewer instructions, so faster</td><td>Static SHFL 20 → 15, FADD 30 → 25, no reliable end-to-end change</td><td>Instruction count is not time</td></tr></tbody></table></div>
+<p><em>Table 15: Six judgments overturned by data. Each row maps to a section above; their measurement scopes differ, so numbers are not compared across rows.</em></p>
+<p>The common lesson is to optimize the path that determines elapsed time. A better local metric helps only if that operation lies on the critical path. Attribution experiments must also separate a change in useful work from a change in the denominator used to report performance.</p>
+<h2 id="8-limitations">8. Workloads beyond the measured operating point</h2>
+<ul>
+<li><strong>Gains depend on shape</strong>: the speedup is smallest at long N (about 1.05× at 160K) because the scoring matrix work dominates. At small Q and short histories the SMs are underused and selection is not hidden.</li>
+<li><strong>Fusion is incomplete</strong>: only the main kernel is fused. Each call still goes through five stages: sampling gather, sampling GEMM, threshold, main kernel and repair. Even with zero failures, masked repair launches several kernels (5 at 8K, 26 at 128K), about 0.357 ms or roughly 0.9% at 160K. These fixed costs are more visible at small Q.</li>
+<li><strong>Performance depends on the data distribution</strong>: exactness is guaranteed by the certificate and repair regardless of distribution, but performance depends on how well the threshold is estimated. With a different sampling seed, underflow still appears in layer 60 of the 160K development set.</li>
+<li><strong>Scope of support and validation</strong>:
+<ul>
+<li>only Hopper (H20) FP8 with B=1 / 64 heads / dim 128 / K=2048 and N from 8K to 160K;</li>
+<li>the real inputs come from one capture: 24 prompts, 1032 source documents, five layers;</li>
+<li>real Q8192 was not measured (synthetic Q8192 shows a Q2 ÷ Q1 of only 1.004×).</li>
+</ul>
+</li>
+<li><strong>Only TTFT is validated</strong>: each request generates 8 tokens, which says nothing about decode throughput, concurrent TPS or tail latency.</li>
+</ul>
+<h2 id="9-related-work">9. Related implementations</h2>
+<ul>
+<li><strong>DeepGEMM</strong> provides the FP8 MQA logits kernel and the TMA / WGMMA pipeline and SMEM layout this project builds on.</li>
+<li><strong>DeepSelect and FlashInfer top-k</strong> are standalone top-k kernels whose input is a full score matrix already in device memory. They are the baselines for this project’s standalone top-k stage; the “write then read back” boundary they sit on is exactly what the fusion stage removes.</li>
+<li><strong>vLLM’s DSA implementation</strong>, DeepGEMM scoring plus a dedicated prefill top-k, is the native baseline in the end-to-end experiment.</li>
+<li><strong>FlashAttention</strong> fuses the production and consumption of attention scores into one kernel to avoid materializing an <span class="math-inline">\(S \times S\)</span> matrix. This project faces a similar producer–consumer fusion, but the consumer is an exact top-k, which cannot reuse softmax’s online recurrence; hence bounded candidates plus exact recovery.</li>
+<li><strong>NSA and HISA</strong>: NSA selects contiguous blocks so that sparse access is regular by construction. HISA reduces Indexer compute with hierarchical block-level filtering and reports a 1.70× TTFT speedup on 8×H200, but it changes the selection semantics. This project keeps exact semantics and optimizes the implementation.</li>
+</ul>
+<h2 id="10-conclusion">10. The optimization target after fusion</h2>
+<p>Eliminating the score matrix makes fusion possible, but overlap makes it worthwhile on H20. The complete design combines sampled filtering and exact selection with warp specialization, double buffering, private candidate segments, explicit overflow recovery, and shape-aware scheduling. At long histories, selection is almost hidden behind scoring; the complete operator reaches about 92% of FP8 peak. Operator gains on real activations also produce a smaller, consistent TTFT improvement inside vLLM.</p>
+<p>Further gains in long-context prefill require reducing the matrix work itself. Small query counts and decode pose a different problem: they need more parallelism along the KV dimension.</p>
+<h2 id="appendix-a-reproduction">Appendix A: Reproduction</h2>
+<div aria-label="Data table 17" class="writing-table-scroll" role="region" tabindex="0"><table><thead><tr><th>Item</th><th>Value</th></tr></thead><tbody><tr><td>Public release</td><td><a href="https://github.com/EdgePro001/FusedIndexTopK/releases/tag/v0.3.0">v0.3.0</a>, <code>05b44daa14991d241de26162aa1bcb773cb6dafb</code></td></tr><tr><td>DeepGEMM</td><td><code>7c95b14aa4a66edd7b682e5acdde62351ca81197</code></td></tr><tr><td>DeepSelect</td><td><code>0f03b68748b304863fdf0181a11458d04ae533a9</code></td></tr><tr><td>Operator environment</td><td>NVIDIA H20-3e, PyTorch 2.10.0+cu130</td></tr><tr><td>End-to-end environment</td><td>vLLM 0.28.0, PyTorch 2.13.0+cu132, 6×H20-3e, TP2 / PP3</td></tr></tbody></table></div>
+<h2 id="appendix-b-timing-scopes">Appendix B: Timing scopes</h2>
+<div aria-label="Data table 18" class="writing-table-scroll" role="region" tabindex="0"><table><thead><tr><th>Section</th><th>Scope</th></tr></thead><tbody><tr><td>3 (standalone top-k)</td><td>Sum of CUPTI kernel time over the top-k stage, including sampling, filtering, selection, output and repair; real Layer-0 score replay</td></tr><tr><td>4 (fused design)</td><td>Warm median of complete-operator CUDA events, 24 alternating groups; cycles from a separate instrumented build</td></tr><tr><td>5.1 (version trajectory)</td><td>Complete operator, eager, CUDA events; same inputs, rotated</td></tr><tr><td>5.2, 5.3 (main kernel)</td><td>Main kernel only, sampling and repair excluded</td></tr><tr><td>6.2 (operator)</td><td>Complete operator, CUDA Graph, 7 paired groups</td></tr><tr><td>6.4 (end to end)</td><td>Whole-model TTFT, eager, concurrency 1, 8 Williams-ordered rounds</td></tr></tbody></table></div>
+<p>Numbers are compared only within the same scope.</p>

@@ -1,0 +1,5 @@
+<article class="writing-card">
+  <p class="writing-card-meta"><time datetime="{{ include.entry.date | date_to_xmlschema }}">{{ include.entry.date | date: "%d %b %Y" }}</time><span>{{ include.entry.tags | join: " / " }}</span></p>
+  <{{ include.heading | default: "h3" }}><a href="{{ include.entry.url | relative_url }}">{{ include.entry.title }}</a></{{ include.heading | default: "h3" }}>
+  <p>{{ include.entry.excerpt | strip_html }}</p>
+</article>

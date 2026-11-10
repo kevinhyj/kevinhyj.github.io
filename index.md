@@ -73,6 +73,24 @@ description: "Yanjie Huang (黄䶮杰) is an undergraduate researcher at Shangha
   </div>
 </section>
 
+<section id="writing" class="section" aria-labelledby="home-writing-title">
+  <div class="container">
+    <div class="section-head">
+      <div>
+        <h2 id="home-writing-title">{{ settings.writing.title }}</h2>
+        <p>{{ settings.writing.description }}</p>
+      </div>
+      <a href="{{ '/writing/' | relative_url }}">See all</a>
+    </div>
+    <div class="writing-list writing-preview">
+      {% assign recent_writings = site.writings | sort: "date" | reverse %}
+      {% for entry in recent_writings limit:3 %}
+        {% include writing-card.html entry=entry heading="h3" %}
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
 <section class="section">
   <div class="container">
     <div class="section-head">

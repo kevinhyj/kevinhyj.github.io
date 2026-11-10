@@ -82,7 +82,10 @@ def parse_front_matter(path: Path) -> tuple[dict, str]:
 def clean_yaml_value(value: str):
     value = value.strip()
     if value.startswith('"') and value.endswith('"'):
-        return value[1:-1]
+        try:
+            return json.loads(value)
+        except json.JSONDecodeError:
+            return value[1:-1]
     return value
 
 
@@ -197,12 +200,17 @@ def project_card_picture(source: str, alt: str) -> str:
 </picture>'''
 
 
-def default_layout(title: str, body: str, description: str = "", path: str = "/", robots: str = DEFAULT_ROBOTS) -> str:
+def default_layout(title: str, body: str, description: str = "", path: str = "/", robots: str = DEFAULT_ROBOTS, math: bool = False, article_date: str = "") -> str:
     page_title = HOME_TITLE if path == "/" else f"{title} | {SITE_TITLE} {AUTHOR_NAME_ZH}"
     desc = description or SITE_DESC
     canonical = f"{SITE_URL}{path}"
     image = f"{SITE_URL}{AUTHOR_IMAGE}"
-    page_type = "article" if path.startswith("/blog/") and path != "/blog/" else "website"
+    page_type = "article" if any(path.startswith(prefix) and path != prefix for prefix in ("/blog/", "/writing/")) else "website"
+    math_assets = '''<link rel="stylesheet" href="/assets/lib/katex/katex.min.css">
+    <script defer src="/assets/lib/katex/katex.min.js"></script>
+    <script defer src="/assets/lib/katex/contrib/auto-render.min.js"></script>
+    <script defer src="/assets/js/writing.js"></script>''' if math else ""
+    article_meta = f'<meta property="article:published_time" content="{datetime_value(article_date)}"><meta property="article:author" content="Yanjie Huang">' if article_date else ""
     person_id = f"{SITE_URL}/#person"
     website_id = f"{SITE_URL}/#website"
     graph = []
@@ -273,6 +281,7 @@ def default_layout(title: str, body: str, description: str = "", path: str = "/"
     <meta name="robots" content="{html.escape(robots, quote=True)}">
     <link rel="canonical" href="{canonical}">
 {verification_tag}    <meta property="og:type" content="{page_type}">
+    {article_meta}
     <meta property="og:site_name" content="Yanjie Huang 黄䶮杰">
     <meta property="og:locale" content="en_US">
     <meta property="og:title" content="{escaped_title}">
@@ -290,6 +299,8 @@ def default_layout(title: str, body: str, description: str = "", path: str = "/"
     </script>
     <link rel="icon" href="/assets/shared/icons/favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="/assets/css/styles.css">
+    <link rel="stylesheet" href="/assets/css/writing.css">
+    {math_assets}
   </head>
   <body>
     <header class="site-header">
@@ -299,6 +310,7 @@ def default_layout(title: str, body: str, description: str = "", path: str = "/"
           <a href="/">Home</a>
           <a href="/projects/">Projects</a>
           <a href="/cv/">CV</a>
+          <a href="/writing/">Writing</a>
           <a href="/blog/">Blog</a>
           <div class="nav-dropdown">
             <button class="nav-trigger" type="button" aria-haspopup="true">Pages</button>
@@ -330,6 +342,7 @@ def default_layout(title: str, body: str, description: str = "", path: str = "/"
           <a href="/">Home</a>
           <a href="/projects/">Projects</a>
           <a href="/cv/">CV</a>
+          <a href="/writing/">Writing</a>
           <a href="/blog/">Blog</a>
           <a href="/cat/">Cat</a>
           <a href="/contact/">Contact</a>
@@ -403,7 +416,7 @@ def post_card(post) -> str:
 </a>"""
 
 
-def write_page(path: str, title: str, body: str, description: str = "", robots: str = DEFAULT_ROBOTS):
+def write_page(path: str, title: str, body: str, description: str = "", robots: str = DEFAULT_ROBOTS, math: bool = False, article_date: str = ""):
     if path == "/":
         target = OUT / "index.html"
     elif path.endswith(".html"):
@@ -411,12 +424,13 @@ def write_page(path: str, title: str, body: str, description: str = "", robots: 
     else:
         target = OUT / path.strip("/") / "index.html"
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(default_layout(title, body, description, path, robots), encoding="utf-8")
+    target.write_text(default_layout(title, body, description, path, robots, math, article_date), encoding="utf-8")
 
 
-def build_home(works, posts):
+def build_home(works, posts, writings):
     project_cards = "\n".join(project_card(work) for work in works[:6])
     post_cards = "\n".join(post_card(post) for post in posts[:3])
+    writing_cards = "\n".join(writing_card(entry) for entry in writings[:3])
     research_intro = re.search(
         r'<section class="section research-intro".*?</section>',
         (ROOT / "index.md").read_text(encoding="utf-8"),
@@ -445,6 +459,15 @@ def build_home(works, posts):
       <a href="/projects/">See all</a>
     </div>
     <div class="project-grid">{project_cards}</div>
+  </div>
+</section>
+<section id="writing" class="section" aria-labelledby="home-writing-title">
+  <div class="container">
+    <div class="section-head">
+      <div><h2 id="home-writing-title">Writing</h2><p>Notes on machine learning systems, GPU kernels, and efficient inference.</p></div>
+      <a href="/writing/">See all</a>
+    </div>
+    <div class="writing-list writing-preview">{writing_cards}</div>
   </div>
 </section>
 <section class="section">
@@ -567,16 +590,58 @@ def build_simple_page(source: str):
     )
 
 
+def load_writings():
+    entries = []
+    for path in (ROOT / "_writings").glob("*.html"):
+        data, body = parse_front_matter(path)
+        data.update(slug=path.stem, url=f"/writing/{path.stem}/", body=body)
+        entries.append(data)
+    return sorted(entries, key=lambda item: str(item["date"]), reverse=True)
+
+
+def writing_card(entry, heading="h3"):
+    return f'''<article class="writing-card">
+<p class="writing-card-meta"><time datetime="{datetime_value(entry['date'])}">{display_date(entry['date'])}</time><span>{html.escape(' / '.join(entry['tags']))}</span></p>
+<{heading}><a href="{entry['url']}">{html.escape(entry['title'])}</a></{heading}>
+<p>{html.escape(entry['excerpt'])}</p></article>'''
+
+
+def build_writings(entries):
+    body = page_head("Writing", "Writing", "Notes on machine learning systems, GPU kernels, and efficient inference.")
+    body += '<section class="section page-section writing-index"><div class="container"><div class="writing-list">'
+    body += "\n".join(writing_card(entry, "h2") for entry in entries)
+    body += '</div></div></section>'
+    write_page("/writing/", "Writing", body, "Technical writing by Yanjie Huang on machine learning systems, GPU kernels, sparse attention, and efficient inference.")
+    for index, entry in enumerate(entries):
+        body = f'''<header class="writing-head"><div class="container">
+<a class="eyebrow" href="/writing/">Writing</a><h1>{html.escape(entry['title'])}</h1>
+<p class="writing-meta"><a href="/cv/">Yanjie Huang</a><span>·</span><time datetime="{datetime_value(entry['date'])}">{display_date(entry['date'])}</time></p>
+<p class="writing-tags">{html.escape(' / '.join(entry['tags']))}</p>
+<p class="writing-deck">{html.escape(entry['excerpt'])}</p></div></header>
+<article class="writing-article"><div class="container writing-content">{entry['body']}</div></article>
+<nav class="writing-pagination container" aria-label="Article navigation">'''
+        if index:
+            newer = entries[index - 1]
+            body += f'<a class="writing-newer" href="{newer["url"]}"><span>← Newer article</span>{html.escape(newer["title"])}</a>'
+        if index + 1 < len(entries):
+            older = entries[index + 1]
+            body += f'<a class="writing-older" href="{older["url"]}"><span>Older article →</span>{html.escape(older["title"])}</a>'
+        body += '<a class="writing-back" href="/writing/">All writing</a></nav>'
+        write_page(entry["url"], entry["title"], body, entry["description"], math=True, article_date=entry["date"])
+
+
 def main():
     if OUT.exists():
         shutil.rmtree(OUT)
     shutil.copytree(ROOT / "assets", OUT / "assets")
     works = load_works()
     posts = load_posts()
-    build_home(works, posts)
+    writings = load_writings()
+    build_home(works, posts, writings)
     build_works(works)
     build_blog(posts)
     build_posts(posts)
+    build_writings(writings)
     build_simple_page("cv.md")
     build_simple_page("cat.md")
     build_simple_page("contact.md")

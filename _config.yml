@@ -27,6 +27,9 @@ collections:
   works:
     output: true
     permalink: /work/:slug/
+  writings:
+    output: true
+    permalink: /writing/:name/
 
 defaults:
   - scope:
@@ -43,6 +46,12 @@ defaults:
       type: "works"
     values:
       layout: "work"
+  - scope:
+      path: ""
+      type: "writings"
+    values:
+      layout: "writing"
+      math: true
 
 exclude:
   - Gemfile

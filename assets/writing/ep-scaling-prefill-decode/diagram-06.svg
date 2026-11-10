@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg aria-label="Weight-reuse threshold r* by GPU and weight precision" class="ev" role="img" style="background:#fff;width:100%;height:auto;display:block" viewBox="0 0 720 406" xmlns="http://www.w3.org/2000/svg"><style>:root{--text:#171717;--secondary:#767676;--background:#fff;--quiet-line:#e6e6e1;--technical:#4d74a8;--reflection:#d95f49;--text-faint:#8a8a8a;--panel:#f7f7f4;--surface:#f7f7f4}</style><style>
+.ev text{font-family:'Spectral',Georgia,'Songti SC',STSong,serif}
+.ev .t{fill:var(--text);font-size:13px}
+.ev .s{fill:var(--secondary);font-size:12px}
+.ev .si{fill:var(--secondary);font-size:12.5px;font-style:italic}
+.ev .h{fill:var(--text);font-size:13.5px;font-weight:500}
+.ev .grid{stroke:var(--quiet-line);stroke-width:1}
+.ev .axis{stroke:var(--secondary);stroke-width:1}
+.ev .ref{stroke:var(--secondary);stroke-width:1.2;stroke-dasharray:5 4;fill:none}
+.ev .ref2{stroke:var(--secondary);stroke-width:1.2;stroke-dasharray:1.5 3.5;fill:none}
+.ev .ln{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.ev .dash{stroke-dasharray:7 5}
+.ev .dot{stroke:var(--background);stroke-width:2}
+.ev .band{fill:var(--quiet-line)}
+.ev .comp{stroke:#215d96}.ev .f-comp{fill:#215d96}
+.ev .wt{stroke:#b45151}.ev .f-wt{fill:#b45151}
+.ev .comm{stroke:#b7933f}.ev .f-comm{fill:#b7933f}
+.ev .ink{stroke:var(--text)}.ev .f-ink{fill:var(--text)}
+html[data-theme="dark"] .ev .comp{stroke:#5e97d0}html[data-theme="dark"] .ev .f-comp{fill:#5e97d0}
+html[data-theme="dark"] .ev .wt{stroke:#b14e4e}html[data-theme="dark"] .ev .f-wt{fill:#b14e4e}
+html[data-theme="dark"] .ev .comm{stroke:#b48e34}html[data-theme="dark"] .ev .f-comm{fill:#b48e34}
+</style><text class="si" text-anchor="start" x="40.0" y="34.0">Weight-reuse threshold r* (rows) = bytes per parameter ÷ 2 × dense FLOPS ÷ memory bandwidth</text><line class="grid" x1="304.0" x2="304.0" y1="52.0" y2="336.0"></line><text class="s" text-anchor="middle" x="304.0" y="352.0">0</text><line class="grid" x1="409.0" x2="409.0" y1="52.0" y2="336.0"></line><text class="s" text-anchor="middle" x="409.0" y="352.0">100</text><line class="grid" x1="514.0" x2="514.0" y1="52.0" y2="336.0"></line><text class="s" text-anchor="middle" x="514.0" y="352.0">200</text><line class="grid" x1="619.0" x2="619.0" y1="52.0" y2="336.0"></line><text class="s" text-anchor="middle" x="619.0" y="352.0">300</text><text class="t" text-anchor="end" x="292.0" y="80.0">H20, FP8 weights</text><rect class="f-ink" height="20" opacity="0.55" rx="4" width="38.9" x="303.99999999999983" y="66.0"><title>H20, FP8 weights: r* ≈ 37 rows</title></rect><text class="t" text-anchor="start" x="350.8" y="81.0">37</text><text class="t" text-anchor="end" x="292.0" y="126.0">B200, FP4 weights × FP8 activations</text><rect class="f-comp" height="20" opacity="1" rx="4" width="156.9" x="303.99999999999983" y="112.0"><title>B200, FP4 weights × FP8 activations: r* ≈ 149 rows</title></rect><text class="t" text-anchor="start" x="468.9" y="127.0">149</text><text class="t" text-anchor="end" x="292.0" y="172.0">H200, FP8 weights</text><rect class="f-ink" height="20" opacity="0.55" rx="4" width="216.5" x="303.99999999999983" y="158.0"><title>H200, FP8 weights: r* ≈ 206 rows</title></rect><text class="t" text-anchor="start" x="528.5" y="173.0">206</text><text class="t" text-anchor="end" x="292.0" y="218.0">B200, FP8 weights</text><rect class="f-ink" height="20" opacity="0.55" rx="4" width="295.3" x="303.99999999999983" y="204.0"><title>B200, FP8 weights: r* ≈ 281 rows</title></rect><text class="t" text-anchor="start" x="607.3" y="219.0">281</text><text class="t" text-anchor="end" x="292.0" y="264.0">H100, FP8 weights</text><rect class="f-ink" height="20" opacity="0.55" rx="4" width="310.1" x="303.99999999999983" y="250.0"><title>H100, FP8 weights: r* ≈ 295 rows</title></rect><text class="t" text-anchor="start" x="622.1" y="265.0">295</text><text class="t" text-anchor="end" x="292.0" y="310.0">B200, FP4 weights × FP4 activations</text><rect class="f-ink" height="20" opacity="0.55" rx="4" width="313.8" x="303.99999999999983" y="296.0"><title>B200, FP4 weights × FP4 activations: r* ≈ 299 rows</title></rect><text class="t" text-anchor="start" x="625.8" y="311.0">299</text><text class="s" text-anchor="start" x="40.0" y="376.0">Blue: the configuration in this post. Dense peak and memory bandwidth from public specs.</text></svg>

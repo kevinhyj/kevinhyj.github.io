@@ -1,0 +1,19 @@
+---
+layout: page
+title: Writing
+permalink: /writing/
+eyebrow: Writing
+subtitle: "Notes on machine learning systems, GPU kernels, and efficient inference."
+description: "Technical writing by Yanjie Huang on machine learning systems, GPU kernels, sparse attention, and efficient inference."
+---
+
+<section class="section page-section writing-index">
+  <div class="container">
+    <div class="writing-list">
+      {% assign writings = site.writings | sort: "date" | reverse %}
+      {% for entry in writings %}
+        {% include writing-card.html entry=entry heading="h2" %}
+      {% endfor %}
+    </div>
+  </div>
+</section>

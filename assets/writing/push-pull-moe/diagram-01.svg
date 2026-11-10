@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg aria-label="Dispatch: DeepEP pushes, Mega MoE pulls" role="img" style="background:#fff;width:100%;height:auto;display:block" viewBox="-2 0 724 300" xmlns="http://www.w3.org/2000/svg"><style>:root{--text:#171717;--secondary:#767676;--background:#fff;--quiet-line:#e6e6e1;--technical:#4d74a8;--reflection:#d95f49;--text-faint:#8a8a8a;--panel:#f7f7f4;--surface:#f7f7f4}</style>
+<style>
+.mm1-lane{fill:var(--text);font-size:15.5px;font-style:italic}
+.mm1-node{fill:var(--note-bg);stroke:var(--note-border);stroke-width:1.2}
+.mm1-key{fill:var(--note-bg);stroke:var(--technical);stroke-width:1.6}
+.mm1-t{fill:var(--text);font-size:15px;font-weight:500}
+.mm1-s{fill:var(--secondary);font-size:13px;font-style:italic}
+.mm1-arrow{stroke:var(--secondary);stroke-width:1.3;fill:none}
+.mm1-head{fill:var(--secondary)}
+.mm1-lbl{fill:var(--secondary);font-size:13px}
+.mm1-wall{stroke:var(--reflection);stroke-width:1.5;stroke-dasharray:5 4}
+.mm1-wallt{fill:var(--reflection);font-size:12.5px;font-style:italic}
+.mm1-cell{fill:none;stroke:var(--secondary);stroke-width:0.9}
+.mm1-fill{fill:var(--technical);opacity:0.85}
+.mm1-foot{fill:var(--secondary);font-size:13px;font-style:italic}
+</style>
+<defs><marker id="mm1-a" markerHeight="6.5" markerWidth="6.5" orient="auto" refX="9" refY="5" viewBox="0 0 10 10"><path class="mm1-head" d="M0,1 L10,5 L0,9 z"></path></marker></defs>
+<text class="mm1-lane" x="0" y="18">DeepEP + DeepGEMM · the sender pushes</text>
+<rect class="mm1-node" height="70" rx="7" width="120" x="0" y="32"></rect>
+<text class="mm1-t" text-anchor="middle" x="60" y="61">Source tokens</text>
+<text class="mm1-s" text-anchor="middle" x="60" y="83">in token order</text>
+<line class="mm1-arrow" marker-end="url(#mm1-a)" x1="122" x2="169" y1="67" y2="67"></line>
+<text class="mm1-lbl" text-anchor="middle" x="146" y="59">push</text>
+<rect class="mm1-node" height="70" rx="7" width="140" x="172" y="32"></rect>
+<text class="mm1-t" text-anchor="middle" x="242" y="61">Receive buffer</text>
+<text class="mm1-s" text-anchor="middle" x="242" y="83">split by source rank</text>
+<line class="mm1-arrow" marker-end="url(#mm1-a)" x1="314" x2="361" y1="67" y2="67"></line>
+<text class="mm1-lbl" text-anchor="middle" x="338" y="59">reorder</text>
+<rect class="mm1-node" height="70" rx="7" width="158" x="364" y="32"></rect>
+<text class="mm1-t" text-anchor="middle" x="443" y="52">Expert matrix</text>
+<rect class="mm1-fill" height="7.2" width="30" x="373" y="68.8"></rect><rect class="mm1-cell" height="16" width="30" x="373" y="60"></rect>
+<rect class="mm1-fill" height="5.6" width="30" x="409" y="70.4"></rect><rect class="mm1-cell" height="16" width="30" x="409" y="60"></rect>
+<rect class="mm1-fill" height="8" width="30" x="445" y="68"></rect><rect class="mm1-cell" height="16" width="30" x="445" y="60"></rect>
+<rect class="mm1-fill" height="6.4" width="30" x="481" y="69.6"></rect><rect class="mm1-cell" height="16" width="30" x="481" y="60"></rect>
+<text class="mm1-s" text-anchor="middle" x="443" y="94">all blocks fill slowly</text>
+<line class="mm1-wall" x1="556" x2="556" y1="26" y2="110"></line>
+<text class="mm1-wallt" text-anchor="middle" x="556" y="126">kernel boundary</text>
+<line class="mm1-arrow" marker-end="url(#mm1-a)" x1="524" x2="587" y1="67" y2="67"></line>
+<rect class="mm1-node" height="70" rx="7" width="130" x="590" y="32"></rect>
+<text class="mm1-t" text-anchor="middle" x="655" y="61">DeepGEMM</text>
+<text class="mm1-s" text-anchor="middle" x="655" y="83">after dispatch ends</text>
+<text class="mm1-lane" x="0" y="170">Mega MoE · the receiver pulls, in one kernel</text>
+<rect class="mm1-node" height="70" rx="7" width="120" x="0" y="184"></rect>
+<text class="mm1-t" text-anchor="middle" x="60" y="213">Source tokens</text>
+<text class="mm1-s" text-anchor="middle" x="60" y="235">stay in place</text>
+<line class="mm1-arrow" marker-end="url(#mm1-a)" x1="122" x2="169" y1="219" y2="219"></line>
+<rect class="mm1-key" height="70" rx="7" width="140" x="172" y="184"></rect>
+<text class="mm1-t" text-anchor="middle" x="242" y="213">① Exchange counts</text>
+<text class="mm1-s" text-anchor="middle" x="242" y="235">who, and how many</text>
+<line class="mm1-arrow" marker-end="url(#mm1-a)" x1="314" x2="361" y1="219" y2="219"></line>
+<text class="mm1-lbl" text-anchor="middle" x="338" y="211">② pull</text>
+<rect class="mm1-key" height="70" rx="7" width="158" x="364" y="184"></rect>
+<text class="mm1-t" text-anchor="middle" x="443" y="204">Expert matrix</text>
+<rect class="mm1-fill" height="16" width="30" x="373" y="212"></rect><rect class="mm1-cell" height="16" width="30" x="373" y="212"></rect>
+<rect class="mm1-fill" height="16" width="30" x="409" y="212"></rect><rect class="mm1-cell" height="16" width="30" x="409" y="212"></rect>
+<rect class="mm1-fill" height="8" width="30" x="445" y="220"></rect><rect class="mm1-cell" height="16" width="30" x="445" y="212"></rect>
+<rect class="mm1-cell" height="16" width="30" x="481" y="212"></rect>
+<text class="mm1-s" text-anchor="middle" x="443" y="246">low blocks fill first</text>
+<line class="mm1-arrow" marker-end="url(#mm1-a)" x1="524" x2="587" y1="219" y2="219"></line>
+<text class="mm1-lbl" text-anchor="middle" x="556" y="211">block full</text>
+<rect class="mm1-key" height="70" rx="7" width="130" x="590" y="184"></rect>
+<text class="mm1-t" text-anchor="middle" x="655" y="213">GEMM</text>
+<text class="mm1-s" text-anchor="middle" x="655" y="235">block by block</text>
+<text class="mm1-foot" x="0" y="292">Combine is a push on both sides: results go back to the source rank and are summed there.</text>
+</svg>

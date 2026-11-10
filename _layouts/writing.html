@@ -1,0 +1,38 @@
+---
+layout: default
+---
+
+<header class="writing-head">
+  <div class="container">
+    <a class="eyebrow" href="{{ '/writing/' | relative_url }}">Writing</a>
+    <h1>{{ page.title }}</h1>
+    <p class="writing-meta"><a href="{{ '/cv/' | relative_url }}">{{ site.data.settings.author.name }}</a><span>·</span><time datetime="{{ page.date | date_to_xmlschema }}">{{ page.date | date: "%d %b %Y" }}</time></p>
+    <p class="writing-tags">{{ page.tags | join: " / " }}</p>
+    <p class="writing-deck">{{ page.excerpt | strip_html }}</p>
+  </div>
+</header>
+
+<article class="writing-article">
+  <div class="container writing-content">
+    {{ content }}
+  </div>
+</article>
+
+{% assign ordered_writings = site.writings | sort: "date" | reverse %}
+<nav class="writing-pagination container" aria-label="Article navigation">
+  {% for entry in ordered_writings %}
+    {% if entry.url == page.url %}
+      {% unless forloop.first %}
+        {% assign newer_index = forloop.index0 | minus: 1 %}
+        {% assign newer = ordered_writings[newer_index] %}
+        <a class="writing-newer" href="{{ newer.url | relative_url }}"><span>← Newer article</span>{{ newer.title }}</a>
+      {% endunless %}
+      {% unless forloop.last %}
+        {% assign older_index = forloop.index0 | plus: 1 %}
+        {% assign older = ordered_writings[older_index] %}
+        <a class="writing-older" href="{{ older.url | relative_url }}"><span>Older article →</span>{{ older.title }}</a>
+      {% endunless %}
+    {% endif %}
+  {% endfor %}
+  <a class="writing-back" href="{{ '/writing/' | relative_url }}">All writing</a>
+</nav>

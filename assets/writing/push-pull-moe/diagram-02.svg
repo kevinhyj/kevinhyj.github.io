@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg aria-label="When each warp role is busy inside the Mega MoE kernel" role="img" style="background:#fff;width:100%;height:auto;display:block" viewBox="0 0 720 272" xmlns="http://www.w3.org/2000/svg"><style>:root{--text:#171717;--secondary:#767676;--background:#fff;--quiet-line:#e6e6e1;--technical:#4d74a8;--reflection:#d95f49;--text-faint:#8a8a8a;--panel:#f7f7f4;--surface:#f7f7f4}</style>
+<style>
+.mm2-ph{fill:var(--secondary);font-size:13px;font-style:italic}
+.mm2-div{stroke:var(--quiet-line);stroke-width:1.2}
+.mm2-role{fill:var(--text);font-size:15px;font-weight:500}
+.mm2-n{fill:var(--secondary);font-size:12.5px;font-style:italic}
+.mm2-busy{fill:var(--technical)}
+.mm2-idle{fill:var(--quiet-line)}
+.mm2-bt{fill:var(--background);font-size:13.5px}
+.mm2-it{fill:var(--secondary);font-size:13.5px;font-style:italic}
+.mm2-note{fill:var(--secondary);font-size:12.5px;font-style:italic}
+</style>
+<!-- track 120..720; phases: start 120-160 | wait 160-265 | pull+compute 265-520 | rest 520-615 | combine 615-720 -->
+<text class="mm2-ph" text-anchor="middle" x="140" y="16">start</text>
+<text class="mm2-ph" text-anchor="middle" x="212" y="16">wait for counts</text>
+<text class="mm2-ph" text-anchor="middle" x="392" y="16">pull ∥ compute</text>
+<text class="mm2-ph" text-anchor="middle" x="567" y="16">rest of compute</text>
+<text class="mm2-ph" text-anchor="middle" x="667" y="16">combine</text>
+<line class="mm2-div" x1="160" x2="160" y1="26" y2="212"></line>
+<line class="mm2-div" x1="265" x2="265" y1="26" y2="212"></line>
+<line class="mm2-div" x1="520" x2="520" y1="26" y2="212"></line>
+<line class="mm2-div" x1="615" x2="615" y1="26" y2="212"></line>
+<text class="mm2-role" x="0" y="52">Pull warps</text><text class="mm2-n" x="0" y="70">×4</text>
+<rect class="mm2-busy" height="32" rx="3" width="143" x="121" y="34"></rect>
+<text class="mm2-bt" text-anchor="middle" x="192" y="55">exchange counts</text>
+<rect class="mm2-busy" height="32" rx="3" width="168" x="266" y="34"></rect>
+<text class="mm2-bt" text-anchor="middle" x="350" y="55">pull rows in order</text>
+<rect class="mm2-idle" height="32" rx="3" width="178" x="436" y="34"></rect>
+<text class="mm2-it" text-anchor="middle" x="525" y="55">wait for layer-2 writes</text>
+<rect class="mm2-busy" height="32" rx="3" width="104" x="616" y="34"></rect>
+<text class="mm2-bt" text-anchor="middle" x="668" y="55">clean up</text>
+<text class="mm2-role" x="0" y="98">Scheduler</text><text class="mm2-n" x="0" y="116">×1</text>
+<rect class="mm2-busy" height="32" rx="3" width="63" x="121" y="80"></rect>
+<rect class="mm2-idle" height="32" rx="3" width="78" x="186" y="80"></rect>
+<text class="mm2-it" text-anchor="middle" x="225" y="101">wait</text>
+<rect class="mm2-busy" height="32" rx="3" width="348" x="266" y="80"></rect>
+<text class="mm2-bt" text-anchor="middle" x="440" y="101">shared expert first, then both layers interleaved</text>
+<rect class="mm2-idle" height="32" rx="3" width="104" x="616" y="80"></rect>
+<text class="mm2-role" x="0" y="144">Load + MMA</text><text class="mm2-n" x="0" y="162">×3</text>
+<rect class="mm2-busy" height="32" rx="3" width="83" x="121" y="126"></rect>
+<text class="mm2-bt" text-anchor="middle" x="162" y="147">≤ 2 tasks</text>
+<rect class="mm2-idle" height="32" rx="3" width="58" x="206" y="126"></rect>
+<rect class="mm2-busy" height="32" rx="3" width="348" x="266" y="126"></rect>
+<text class="mm2-bt" text-anchor="middle" x="440" y="147">two GEMM layers</text>
+<rect class="mm2-idle" height="32" rx="3" width="104" x="616" y="126"></rect>
+<text class="mm2-role" x="0" y="190">Epilogue</text><text class="mm2-n" x="0" y="208">×8</text>
+<rect class="mm2-busy" height="32" rx="3" width="38" x="121" y="172"></rect>
+<rect class="mm2-idle" height="32" rx="3" width="103" x="161" y="172"></rect>
+<text class="mm2-it" text-anchor="middle" x="212" y="193">blocked</text>
+<rect class="mm2-busy" height="32" rx="3" width="348" x="266" y="172"></rect>
+<text class="mm2-bt" text-anchor="middle" x="440" y="193">finish both GEMM layers</text>
+<rect class="mm2-busy" height="32" rx="3" width="104" x="616" y="172"></rect>
+<text class="mm2-bt" text-anchor="middle" x="668" y="193">sum results</text>
+<rect class="mm2-busy" height="10" rx="2" width="14" x="121" y="230"></rect>
+<text class="mm2-note" x="141" y="239">busy</text>
+<rect class="mm2-idle" height="10" rx="2" width="14" x="186" y="230"></rect>
+<text class="mm2-note" x="206" y="239">waiting or idle</text>
+<text class="mm2-note" text-anchor="end" x="720" y="239">Schematic, not to scale.</text>
+<text class="mm2-note" x="121" y="262">≤ 2 tasks: before the epilogue is released, at most two shared-expert tasks can run.</text>
+</svg>

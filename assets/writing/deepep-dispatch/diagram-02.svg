@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg aria-label="V2 hybrid dispatch: one copy per node over the NIC, then one copy per GPU over NVLink" role="img" style="background:#fff;width:100%;height:auto;display:block" viewBox="0 0 720 214" xmlns="http://www.w3.org/2000/svg"><style>:root{--text:#171717;--secondary:#767676;--background:#fff;--quiet-line:#e6e6e1;--technical:#4d74a8;--reflection:#d95f49;--text-faint:#8a8a8a;--panel:#f7f7f4;--surface:#f7f7f4}</style>
+<style>
+.dd2-node{fill:var(--note-bg);stroke:var(--note-border);stroke-width:1.2}
+.dd2-key{fill:var(--note-bg);stroke:var(--technical);stroke-width:1.6}
+.dd2-t{fill:var(--text);font-size:15px;font-weight:500}
+.dd2-s{fill:var(--secondary);font-size:13px;font-style:italic}
+.dd2-arrow{stroke:var(--secondary);stroke-width:1.3;fill:none}
+.dd2-head{fill:var(--secondary)}
+.dd2-l{fill:var(--text);font-size:13.5px}
+.dd2-n{fill:var(--secondary);font-size:12.5px;font-style:italic}
+.dd2-wall{stroke:var(--quiet-line);stroke-width:1.2;stroke-dasharray:5 4}
+</style>
+<defs><marker id="dd2-a" markerHeight="6.5" markerWidth="6.5" orient="auto" refX="9" refY="5" viewBox="0 0 10 10"><path class="dd2-head" d="M0,1 L10,5 L0,9 z"></path></marker></defs>
+<text class="dd2-s" text-anchor="middle" x="72" y="16">node A</text>
+<text class="dd2-s" text-anchor="middle" x="262" y="16">node B</text>
+<line class="dd2-wall" x1="214" x2="214" y1="6" y2="136"></line>
+<rect class="dd2-node" height="70" rx="7" width="144" x="0" y="42"></rect>
+<text class="dd2-t" text-anchor="middle" x="72" y="71">Source GPU i</text>
+<text class="dd2-s" text-anchor="middle" x="72" y="93">send buffer [Tmax]</text>
+<line class="dd2-arrow" marker-end="url(#dd2-a)" x1="146" x2="268" y1="77" y2="77"></line>
+<text class="dd2-l" text-anchor="middle" x="206" y="66">Rail, NIC</text>
+<rect class="dd2-key" height="70" rx="7" width="158" x="272" y="42"></rect>
+<text class="dd2-t" text-anchor="middle" x="351" y="71">Relay GPU i</text>
+<text class="dd2-s" text-anchor="middle" x="351" y="93">[src node, channel, slot]</text>
+<rect class="dd2-node" height="26" rx="5" width="180" x="540" y="26"></rect>
+<text class="dd2-s" text-anchor="middle" x="630" y="44">Target GPU j1</text>
+<rect class="dd2-node" height="26" rx="5" width="180" x="540" y="64"></rect>
+<text class="dd2-s" text-anchor="middle" x="630" y="82">Target GPU j2</text>
+<rect class="dd2-node" height="26" rx="5" width="180" x="540" y="102"></rect>
+<text class="dd2-s" text-anchor="middle" x="630" y="120">Target GPU j3</text>
+<line class="dd2-arrow" marker-end="url(#dd2-a)" x1="432" x2="536" y1="70" y2="39"></line>
+<line class="dd2-arrow" marker-end="url(#dd2-a)" x1="432" x2="536" y1="77" y2="77"></line>
+<line class="dd2-arrow" marker-end="url(#dd2-a)" x1="432" x2="536" y1="84" y2="115"></line>
+<text class="dd2-l" text-anchor="middle" x="484" y="20">Lsa, NVLink</text>
+<text class="dd2-l" text-anchor="middle" x="206" y="160">Hop 1: one copy per node</text>
+<text class="dd2-n" text-anchor="middle" x="206" y="180">one writer per segment</text>
+<text class="dd2-n" text-anchor="middle" x="206" y="198">slot = channel tail</text>
+<text class="dd2-l" text-anchor="middle" x="484" y="160">Hop 2: one copy per GPU</text>
+<text class="dd2-n" text-anchor="middle" x="484" y="180">several forward warps share a segment</text>
+<text class="dd2-n" text-anchor="middle" x="484" y="198">slot = atomic add, then copy epilogue</text>
+</svg>

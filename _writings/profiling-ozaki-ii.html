@@ -1,0 +1,537 @@
+---
+layout: writing
+title: "Profiling Ozaki II: The Cost Behind Fast INT8 GEMMs"
+date: 2026-09-29
+excerpt: "Fast Tensor Core GEMMs can expose a slower preprocessing path. Trace Ozaki II from modular arithmetic to H20 instructions, measured stage costs, and optimization opportunities."
+description: "Fast Tensor Core GEMMs can expose a slower preprocessing path. Trace Ozaki II from modular arithmetic to H20 instructions, measured stage costs, and optimization opportunities."
+tags:
+  - "GPU Kernels"
+  - "Numerical Computing"
+math: true
+---
+
+<details class="writing-toc" open=""><summary>On this page</summary><ul><li><a href="#tldr">At a glance</a></li><li><a href="#part-i-goal-emulating-high-precision-matrix-multiplication-with-high-throughput-low-precision-matrix-multiplication">Part I. The numerical pipeline</a></li><li><a href="#1-computing-a-high-precision-product-with-multiple-int8-gemms">1. Express a high-precision product through modular GEMMs</a></li><li><a href="#2-how-fast-and-accu-trade-bound-estimation-cost-for-accuracy">2. Trade bound-estimation cost for accuracy</a></li><li><a href="#3-once-the-main-multiplication-is-faster-preprocessing-becomes-a-substantial-cost">3. Locate the cost exposed by faster GEMMs</a></li><li><a href="#part-ii-reflections-further-profiling-analysis-of-the-ozaki-ii-method">Part II. Explaining the H20 measurements</a></li><li><a href="#4-reproduction-experiments-on-h20-3e">4. Establish the H20 experimental setup</a></li><li><a href="#5-timing-measurements-input-preprocessing">5. Break down input preprocessing</a></li><li><a href="#6-complexity-analysis-how-matrix-size-and-modulus-count-affect-execution-time">6. Separate matrix-size scaling from modulus-count scaling</a></li><li><a href="#7-kernel-analysis-identifying-what-limits-preprocessing">7. Identify the limiting execution pipeline</a></li><li><a href="#8-which-instructions-does-one-int8-residue-require">8. Trace one residue from arithmetic to instructions</a></li><li><a href="#9-why-less-arithmetic-can-still-take-more-time">9. Explain the mismatch between operation count and time</a></li><li><a href="#10-implications-for-further-optimization">10. Two optimization directions</a></li><li><a href="#11-closing-thoughts">11. What the profile teaches</a></li><li><a href="#references">References</a></li><li><a href="#supplementary-throughput">Supplement. Complete paper throughput tables</a></li><li><a href="#section-1">1 The Ozaki II pipeline and the conditions for INT8 computation</a></li><li><a href="#section-6">2 Why constrain scaled entries by 2 k 2^k 2 k</a></li><li><a href="#section-7">3 Performance gains and where execution time goes</a></li></ul></details>
+<h2 id="tldr">At a glance</h2>
+<ul>
+<li>Ozaki II replaces one slower double precision matrix multiplication (FP64) with several very fast integer matrix multiplications (INT8). With the main multiplication already handled by INT8 Tensor Cores, preparing the inputs instead becomes more time-consuming, in many cases approaching or even exceeding the main GEMMs. This article investigates why.</li>
+<li><strong>Most preprocessing time goes into generating multiple sets of integer residues.</strong> To prepare high precision inputs for multiple INT8 matrix multiplications, every input element must be reduced repeatedly under different moduli. In the large-matrix, many-modulus configurations the study tested, this step accounts for most preprocessing time.</li>
+<li><strong>Generating INT8 residues still incurs the cost of FP64 arithmetic.</strong> Source and assembly show several floating point instructions per residue, while H20 hardware metrics show the ordinary FP64 execution path used by preprocessing approaching saturation. The main GEMMs use much higher throughput INT8 Tensor Cores. Preprocessing can therefore do less arithmetic yet take a comparable amount of time, or even longer.</li>
+<li><strong>Further acceleration requires attention to the cost of preparing inputs.</strong> As the main GEMMs become faster, preprocessing becomes harder to ignore in the total runtime. The analysis points to a concrete optimization direction: reduce the FP64 work needed to generate the INT8 inputs while preserving correct residues, then evaluate the benefit using the complete computation’s runtime.</li>
+</ul>
+<h2 id="part-i-goal-emulating-high-precision-matrix-multiplication-with-high-throughput-low-precision-matrix-multiplication">Part I. The numerical pipeline</h2>
+<h2 id="1-computing-a-high-precision-product-with-multiple-int8-gemms">1. Express a high-precision product through modular GEMMs</h2>
+<p>Let <span class="math-inline">\(A\in\mathbb R^{p\times q}\)</span>, <span class="math-inline">\(B\in\mathbb R^{q\times r}\)</span>, and <span class="math-inline">\(C=AB\)</span>. Each output is a dot product of length <span class="math-inline">\(q\)</span>; in the square experiments, <span class="math-inline">\(p=q=r=n\)</span>. Ozaki II chooses <span class="math-inline">\(s\)</span> small, pairwise coprime moduli <span class="math-inline">\(m_1,\ldots,m_s\)</span>, with product <span class="math-inline">\(M=\prod_{t=1}^{s}m_t\)</span>, and jointly represents scaled integer inputs through their residues.<sup><a aria-label="Reference 1" href="#ref-1" title="Ozaki Scheme II">[1]</a></sup></p>
+<p>Product bounds first determine diagonal scaling matrices <span class="math-inline">\(D\in\mathbb R^{p\times p}\)</span> and <span class="math-inline">\(E\in\mathbb R^{r\times r}\)</span>, whose diagonal entries are positive powers of two. Left multiplication by <span class="math-inline">\(D\)</span> scales rows of A; right multiplication by <span class="math-inline">\(E\)</span> scales columns of B. The complete pipeline follows, with <span class="math-inline">\(t=1,\ldots,s\)</span> identifying the modulus channels:</p>
+<div aria-label="Data table 1" class="writing-table-scroll" role="region" tabindex="0"><table><thead><tr><th>Stage</th><th>Operations and formulas</th><th>Color used below</th></tr></thead><tbody><tr><td>Input preprocessing</td><td>Estimate bounds and choose <span class="math-inline">\(D,E\)</span>, then scale and truncate toward zero: <span class="math-inline">\(A'=\operatorname{trunc}(DA)\)</span>, <span class="math-inline">\(B'=\operatorname{trunc}(BE)\)</span>.<br/>Generate INT8 residues: <span class="math-inline">\(A_t=\rho_{m_t}(A')\)</span>, <span class="math-inline">\(B_t=\rho_{m_t}(B')\)</span>.</td><td>Green</td></tr><tr><td>Main matrix multiplication</td><td><span class="math-inline">\(P_t=A_tB_t\)</span>, using INT8 × INT8 → INT32 GEMM.</td><td>Yellow</td></tr><tr><td>Output reduction</td><td><span class="math-inline">\(R_t=P_t\bmod m_t\)</span>, taking a nonnegative residue for each entry.</td><td>Blue</td></tr><tr><td>Combination and inverse scaling</td><td>Combine residue channels: <span class="math-inline">\(X=\operatorname{CRT}_M(R_1,\ldots,R_s)\)</span>.<br/>Restore the original scale: <span class="math-inline">\(\widehat C=D^{-1}XE^{-1}\approx AB\)</span>.</td><td>Red</td></tr></tbody></table></div>
+<p>Here <span class="math-inline">\(\rho_m\)</span> takes centered residues entrywise. The operator <span class="math-inline">\(\operatorname{CRT}_M\)</span> reconstructs each entry in <span class="math-inline">\([-M/2,M/2)\)</span> using the Chinese Remainder Theorem. Scaling must ensure <span class="math-inline">\(\max_{i,j}|(A'B')_{ij}|&lt;M/2\)</span>, so exact arithmetic would reconstruct <span class="math-inline">\(X=A'B'\)</span>. The final approximation is denoted by <span class="math-inline">\(\widehat C\)</span>, since integerizing the inputs and performing reconstruction can still introduce error.</p>
+<p><strong>Exact computation in the low precision core depends on two range conditions.</strong> Each modulus is at most 256, allowing centered residues to fit into signed INT8’s <span class="math-inline">\([-128,127]\)</span>. Each product has magnitude at most <span class="math-inline">\(128^2=2^{14}\)</span>, so</p>
+<div class="math-display">\[q\,2^{14}&lt;2^{31}\quad\Longleftrightarrow\quad q&lt;131072\]</div>
+<p>is sufficient to prevent INT32 accumulation overflow, including intermediate partial sums. Integer multiply-accumulate operations within range are exact. Accuracy of the complete FP64 result still depends on input truncation and reconstruction. <a href="https://arxiv.org/html/2504.08009v4#S3.SS1">Paper, Section 3.1</a><sup><a aria-label="Reference 1" href="#ref-1" title="Ozaki Scheme II">[1]</a></sup></p>
+<p>Using <span class="math-inline">\(s\)</span> moduli requires <span class="math-inline">\(s\)</span> main GEMMs. More moduli enlarge the reconstruction range and generally allow more input information to be retained, at the cost of additional input residues, GEMMs, and output processing. The suffix 14 in fast-14 and accu-14 denotes 14 moduli for the main computation.</p>
+<h2 id="2-how-fast-and-accu-trade-bound-estimation-cost-for-accuracy">2. Trade bound-estimation cost for accuracy</h2>
+<p>Scaling balances two requirements: <strong>amplify inputs enough to limit information lost during integerization, while keeping the integer product inside the reconstruction range.</strong> This requires an upper bound on each output’s magnitude before performing the main multiplication.</p>
+<p><strong>Fast estimates the bound from row and column norms.</strong> Cauchy–Schwarz gives</p>
+<div class="math-display">\[(|A||B|)_{ij}\le\|A(i,:)\|_2\|B(:,j)\|_2.\]</div>
+<p>Scanning rows of A and columns of B takes <span class="math-inline">\(O(pq+qr)\)</span> work. The bound discards matching positions: both norms can be large even when their large entries occur at different positions, making the scaling unnecessarily conservative.</p>
+<p><strong>Accu estimates the bound with one additional INT8 GEMM.</strong> It scales and rounds absolute inputs upward into INT8 matrices, ensuring that each reconstructed entry bounds the original absolute value. Their product then supplies a bound that retains positional relationships. This can reduce overestimation and preserve more input information under the same modulus budget, although the effect depends on the data and quantization.</p>
+<p>For the performance discussion, the location of this extra work matters: <strong>accu’s bound-input conversion, bound GEMM, and output reduction all belong to green preprocessing.</strong> Green therefore includes an <span class="math-inline">\(O(pqr)\)</span> matrix multiplication in accu, alongside its elementwise operations. <a href="https://arxiv.org/html/2504.08009v4#S4.SS1">The paper’s two bounds</a><sup><a aria-label="Reference 1" href="#ref-1" title="Ozaki Scheme II">[1]</a></sup></p>
+<h2 id="3-once-the-main-multiplication-is-faster-preprocessing-becomes-a-substantial-cost">3. Locate the cost exposed by faster GEMMs</h2>
+<p>The paper compares against native DGEMM, or double precision matrix multiplication, in NVIDIA’s cuBLAS matrix library. The table below selects representative results from two GPUs, measured in <strong>effective TFLOPS</strong>: the final task’s <span class="math-inline">\(2n^3\)</span> operations divided by total elapsed time, rather than the internal work of all <span class="math-inline">\(s\)</span> GEMMs.</p>
+<div aria-label="Data table 2" class="writing-table-scroll" role="region" tabindex="0"><table><thead><tr><th>GPU / matrix order</th><th align="right">Native DGEMM</th><th align="right">fast-14</th><th align="right">accu-14</th><th align="right">fast-18</th><th align="right">accu-18</th></tr></thead><tbody><tr><td>GH200 / 16384</td><td align="right">60.9</td><td align="right">80.2</td><td align="right">71.1</td><td align="right">62.6</td><td align="right">56.6</td></tr><tr><td>RTX 4090 / 8192</td><td align="right">0.62</td><td align="right">9.81</td><td align="right">9.23</td><td align="right">7.83</td><td align="right">7.41</td></tr></tbody></table></div>
+<p><em>Source: the paper’s GPU throughput measurements (<a href="https://arxiv.org/html/2504.08009v4#S4.SS1">Tables 3 and 4</a><sup><a aria-label="Reference 1" href="#ref-1" title="Ozaki Scheme II">[1]</a></sup>). All sizes and modulus configurations are retained in the <a href="#supplementary-throughput">supplement</a>.</em></p>
+<p>Fast-14 reaches approximately <strong>1.32×</strong> and <strong>15.8×</strong> the throughput of native DGEMM in these two configurations. The difference is related to hardware throughput ratios: the paper lists dense INT8 Tensor / FP64 Tensor peaks of 1979 TOPS / 67 TFLOPS for GH200, while RTX 4090 has INT8 Tensor / ordinary FP64 peaks of 660.6 TOPS / 1.29 TFLOPS. RTX 4090 has much weaker native FP64 throughput than GH200. <a href="https://arxiv.org/html/2504.08009v4#S1">Paper hardware specifications</a><sup><a aria-label="Reference 1" href="#ref-1" title="Ozaki Scheme II">[1]</a></sup> In addition, fast is consistently faster than accu at the same size and modulus count, and increasing the number of moduli lowers throughput.</p>
+<p>Next, consider the stage fractions for two large-matrix configurations:</p>
+<p><img alt="GH200: stage fractions for fast at matrix order 16384" decoding="async" height="1600" loading="lazy" src="/assets/writing/profiling-ozaki-ii/paper-fig6d.png" width="2660"/>
+<img alt="RTX 4090: stage fractions for fast at matrix order 8192" decoding="async" height="1600" loading="lazy" src="/assets/writing/profiling-ozaki-ii/paper-fig7d.png" width="2659"/></p>
+<p><em>GH200 is on the left and RTX 4090 on the right; narrow screens stack them vertically. The horizontal axis is the modulus count, each bar is normalized to 100%, and the colors follow the pipeline table in Section 1. Excerpts from paper <a href="https://arxiv.org/html/2504.08009v4#S4.SS1">Figures 6(d) and 7(d)</a><sup><a aria-label="Reference 1" href="#ref-1" title="Ozaki Scheme II">[1]</a></sup>. The two figures use different matrix sizes and show relative rather than absolute speed.</em></p>
+<p>The figures show that the main GEMM share generally increases with matrix size. Yet even when the main GEMMs (yellow) account for most of the time, preprocessing (green) remains a substantial cost. The H20 study examines that cost through stage timings, complexity, hardware counters, and machine instructions.</p>
+<h2 id="part-ii-reflections-further-profiling-analysis-of-the-ozaki-ii-method">Part II. Explaining the H20 measurements</h2>
+<h2 id="4-reproduction-experiments-on-h20-3e">4. Establish the H20 experimental setup</h2>
+<p>The profiling study begins with a stage-level question: when does preprocessing, shown in green, approach or exceed the main GEMMs, shown in yellow? Timing establishes the relevant configurations; kernel counters and assembly then explain their cost.</p>
+<p>The reproduction uses one H20-3e and four square matrix sizes, <span class="math-inline">\(1024,2048,8192,16384\)</span>, both bound-estimation modes (fast and accu), and modulus counts <span class="math-inline">\(s=2,\ldots,20\)</span>. Each configuration used 3 warmups and 30 measurements. Inputs followed the historical code’s generator, with <span class="math-inline">\(\phi=0.5\)</span> and seed=123456; A and B used the same seed.</p>
+<p><img alt="H20 breakdown using the sizes from Figure 6" decoding="async" height="1760" loading="lazy" src="/assets/writing/profiling-ozaki-ii/fig6_h20.png" width="2860"/></p>
+<p><img alt="H20 breakdown using the sizes from Figure 7" decoding="async" height="1760" loading="lazy" src="/assets/writing/profiling-ozaki-ii/fig7_h20.png" width="2860"/></p>
+<p><em>Stage fractions measured on H20-3e. The first plot follows the matrix-size layout of paper Figure 6, and the second follows Figure 7; both use the reproduction data rather than the original paper results.</em></p>
+<p>First, consider several absolute timings and ratios for fast:</p>
+<div aria-label="Data table 3" class="writing-table-scroll" role="region" tabindex="0"><table><thead><tr><th align="right"><span class="math-inline">\(n\)</span></th><th align="right"><span class="math-inline">\(s\)</span></th><th align="right">Green ms</th><th align="right">Yellow ms</th><th align="right">Green / yellow</th><th align="right">Yellow INT8 TOPS</th></tr></thead><tbody><tr><td align="right">1024</td><td align="right">2</td><td align="right">0.1267</td><td align="right">0.05394</td><td align="right">2.35</td><td align="right">79.6</td></tr><tr><td align="right">2048</td><td align="right">14</td><td align="right">1.0554</td><td align="right">1.3161</td><td align="right">0.802</td><td align="right">182.8</td></tr><tr><td align="right">8192</td><td align="right">14</td><td align="right">15.3937</td><td align="right">55.9376</td><td align="right">0.275</td><td align="right">275.2</td></tr><tr><td align="right">16384</td><td align="right">14</td><td align="right">60.5876</td><td align="right">436.3535</td><td align="right">0.139</td><td align="right">282.2</td></tr></tbody></table></div>
+<p>In many configurations, such as size 2048 with 14 moduli, preprocessing costs almost as much as all the main GEMMs combined. Even at size 8192, green remains 27.5% of yellow. This is the observation we need to explain.</p>
+<h2 id="5-timing-measurements-input-preprocessing">5. Break down input preprocessing</h2>
+<h3 id="51-input-statistics-determine-the-scaling">5.1 Input statistics determine the scaling</h3>
+<p>The fast path scans each row of A and column of B for a maximum absolute value and a sum of squares. Warp shuffles, shared memory, and block reductions combine these values; the kernel then computes a power-of-two scaling exponent.</p>
+<p>These statistics are part of the numerical method. The sum of squares supports the norm-related bound, and the maximum and exponents participate in scaling. They are not logging or a simple average. Upward rounding in the sum of squares and additions helps avoid underestimating the bound.</p>
+<p>The original implementation fuses statistics, scaling, truncation, and residues into two GPU kernels, one for A and one for B. A kernel is a function executed collectively by many GPU threads; one launch can contain several different operations.</p>
+<pre><code>fast
+  A row statistics → scale exponent → scale/truncate → s residues
+  B column statistics → scale exponent → scale/truncate → s residues
+
+accu
+  Upward quantization of |A| and |B| → one bound GEMM
+  Row/column maxima of the bound output → final scale exponents
+  Scale/truncate original A and B → s residues</code></pre>
+<blockquote>
+<p>Note: Input generation, workspace allocation, and host-to-device transfers are outside the green timings. <a href="https://github.com/RIKEN-RCCS/GEMMul8/blob/d3ffd5f52e89bdc5338ebff6ba1deccc02b5935a/GEMMul8/src/scaling.hpp">Historical <code>scaling.hpp</code></a><sup><a aria-label="Reference 2" href="#ref-2" title="GEMMul8">[2]</a></sup></p>
+</blockquote>
+<h3 id="52-a-detailed-timing-breakdown-of-preprocessing">5.2 A detailed timing breakdown of preprocessing</h3>
+<p>A diagnostic version separates the final fused kernel into statistics, scale/truncate, and residue generation. It retains the original access directions and thread mapping, storing intermediate integer-valued data in FP64 arrays. All INT8 residues and scaling exponents matched the original implementation across all 12 validation groups: three sizes, two modes, and two diagnostic variants.</p>
+<p>At <span class="math-inline">\(n=8192,s=14\)</span>, combining A and B timings gives:</p>
+<div aria-label="Data table 4" class="writing-table-scroll" role="region" tabindex="0"><table><thead><tr><th>Diagnostic stage</th><th align="right">fast ms</th><th align="right">fast share</th><th align="right">accu ms</th><th align="right">accu share</th></tr></thead><tbody><tr><td>Prepare bound INT8 inputs</td><td align="right">—</td><td align="right">—</td><td align="right">2.486</td><td align="right">11.6%</td></tr><tr><td>Bound GEMM</td><td align="right">—</td><td align="right">—</td><td align="right">4.034</td><td align="right">18.8%</td></tr><tr><td>Statistics and final scaling choice</td><td align="right">1.239</td><td align="right">8.0%</td><td align="right">0.656</td><td align="right">3.1%</td></tr><tr><td>Scale, truncate, and write intermediate data</td><td align="right">1.937</td><td align="right">12.5%</td><td align="right">1.936</td><td align="right">9.0%</td></tr><tr><td>Generate and write <span class="math-inline">\(s\)</span> residue channels</td><td align="right">12.330</td><td align="right">79.5%</td><td align="right">12.330</td><td align="right">57.5%</td></tr><tr><td>Total</td><td align="right">15.506</td><td align="right">100%</td><td align="right">21.442</td><td align="right">100%</td></tr></tbody></table></div>
+<p><img alt="Operation breakdown inside green" decoding="async" height="1080" loading="lazy" src="/assets/writing/profiling-ozaki-ii/green_operations_h20.png" width="3100"/></p>
+<p><em>Stage shares in the split diagnostic.</em></p>
+<blockquote>
+<p>Note: Splitting adds intermediate FP64 reads and writes, kernel launches, and changes to register and cache behavior. At size 8192, total device time increases by about 0.7% for fast and 3.3% for accu; at size 1024 with two moduli, the disturbance is about 19%. These results nevertheless identify the largest component: with many moduli and large matrices, residue generation occupies most of fast preprocessing. However, in the split result at size 1024 with two moduli, statistics account for about 45.3%, scaling 28.4%, and residues 26.2%; fixed scanning costs are more prominent.</p>
+</blockquote>
+<p>The accu path also performs a GEMM during preprocessing to estimate the bound (yellow in the operation-breakdown figure). This extra GEMM becomes more prominent as the matrix grows. CUDA event measurements put it at about 19.5% of preprocessing at size 8192, rising to about 32.0% at size 16384.</p>
+<h2 id="6-complexity-analysis-how-matrix-size-and-modulus-count-affect-execution-time">6. Separate matrix-size scaling from modulus-count scaling</h2>
+<p>Counting serial work, with fixed-precision arithmetic treated as constant cost, gives the following estimates:</p>
+<div aria-label="Data table 5" class="writing-table-scroll" role="region" tabindex="0"><table><thead><tr><th>Operation</th><th>General shape</th><th>Square case</th></tr></thead><tbody><tr><td>fast input statistics</td><td><span class="math-inline">\(\Theta(pq+qr)\)</span></td><td><span class="math-inline">\(\Theta(n^2)\)</span></td></tr><tr><td>Scaling and truncation</td><td><span class="math-inline">\(\Theta(pq+qr)\)</span></td><td><span class="math-inline">\(\Theta(n^2)\)</span></td></tr><tr><td>Input residues</td><td><span class="math-inline">\(\Theta(s(pq+qr))\)</span></td><td><span class="math-inline">\(\Theta(sn^2)\)</span></td></tr><tr><td>accu bound input conversion</td><td><span class="math-inline">\(\Theta(pq+qr)\)</span></td><td><span class="math-inline">\(\Theta(n^2)\)</span></td></tr><tr><td>accu bound GEMM</td><td><span class="math-inline">\(\Theta(pqr)\)</span></td><td><span class="math-inline">\(\Theta(n^3)\)</span></td></tr><tr><td>accu bound output reductions</td><td><span class="math-inline">\(\Theta(pr)\)</span></td><td><span class="math-inline">\(\Theta(n^2)\)</span></td></tr><tr><td>Yellow main GEMMs</td><td><span class="math-inline">\(\Theta(spqr)\)</span></td><td><span class="math-inline">\(\Theta(sn^3)\)</span></td></tr><tr><td>Blue output residues</td><td><span class="math-inline">\(\Theta(spr)\)</span></td><td><span class="math-inline">\(\Theta(sn^2)\)</span></td></tr><tr><td>Red CRT and inverse scaling</td><td><span class="math-inline">\(\Theta(spr)\)</span></td><td><span class="math-inline">\(\Theta(sn^2)\)</span></td></tr></tbody></table></div>
+<blockquote>
+<p>Note: The last row assumes this implementation’s fixed one-word or two-word working precision. If target precision grows without bound, the cost of multiprecision arithmetic must also be included.</p>
+</blockquote>
+<p>Thus fast’s green work is approximately <span class="math-inline">\(O(n^2+sn^2)\)</span>, while accu adds an <span class="math-inline">\(O(n^3)\)</span> term. Holding <span class="math-inline">\(s=14\)</span> and doubling size from 8192 to 16384 increases measured fast green time by <strong>3.94×</strong>, yellow by <strong>7.80×</strong>, and accu green by <strong>4.70×</strong>. These are consistent with quadratic, cubic, and mixed growth.</p>
+<p>At fixed <span class="math-inline">\(n=8192\)</span>, linear fits over <span class="math-inline">\(s=2\ldots20\)</span> give</p>
+<div class="math-display">\[T_{\rm fast,green}\approx3.007+0.8848s\quad\text{ms},\]</div>
+<div class="math-display">\[T_{\rm accu,green}\approx8.316+0.8863s\quad\text{ms}.\]</div>
+<p>The slopes are almost identical, while accu has a larger intercept, reflecting additional bound-estimation work independent of <span class="math-inline">\(s\)</span>. This means that each extra modulus adds almost the same preprocessing time to fast and accu, but accu also pays an additional bound-estimation cost.</p>
+<p>After analyzing complexity, the question becomes: <strong>why does <span class="math-inline">\(O(sn^2)\)</span> preprocessing take about as long as the <span class="math-inline">\(O(sn^3)\)</span> main GEMMs?</strong> Hardware and other constraints mean that algorithmic complexity cannot be equated directly with elapsed time. Actual execution rates explain the gap between the operation counts and elapsed time.</p>
+<h2 id="7-kernel-analysis-identifying-what-limits-preprocessing">7. Identify the limiting execution pipeline</h2>
+<p>Nsight Compute exposes the execution-pipeline and memory-system counters needed to distinguish these costs. The following measurements sample the original, unsplit fast kernels; DRAM throughput denotes the transfer rate of device memory. Percent utilization must be interpreted against each pipeline’s own throughput ceiling.</p>
+<div aria-label="Data table 6" class="writing-table-scroll" role="region" tabindex="0"><table><thead><tr><th><span class="math-inline">\(n/s\)</span></th><th>Kernel</th><th align="right">FP64 pipeline %</th><th align="right">INT Tensor pipeline %</th><th align="right">DRAM throughput %</th></tr></thead><tbody><tr><td>1024/2</td><td>Green A</td><td align="right">88.1</td><td align="right">0</td><td align="right">1.13</td></tr><tr><td>1024/2</td><td>Green B</td><td align="right">89.3</td><td align="right">0</td><td align="right">0.62</td></tr><tr><td>2048/14</td><td>Green A</td><td align="right">95.6</td><td align="right">0</td><td align="right">3.62</td></tr><tr><td>2048/14</td><td>Green B</td><td align="right">95.8</td><td align="right">0</td><td align="right">3.46</td></tr><tr><td>2048/14</td><td>Yellow GEMM</td><td align="right">0</td><td align="right">73.4</td><td align="right">2.56</td></tr><tr><td>8192/14</td><td>Green A</td><td align="right">98.0</td><td align="right">0</td><td align="right">5.04</td></tr><tr><td>8192/14</td><td>Green B</td><td align="right">98.3</td><td align="right">0</td><td align="right">4.88</td></tr><tr><td>8192/14</td><td>Yellow GEMM</td><td align="right">0</td><td align="right">95.4</td><td align="right">9.79</td></tr></tbody></table></div>
+<blockquote>
+<p>Note: <em>Each column is normalized to the sustained peak of its corresponding resource.<sup><a aria-label="Reference 4" href="#ref-4" title="Nsight Compute Profiling Guide">[4]</a></sup></em></p>
+</blockquote>
+<p><strong>The key to interpreting these numbers is that ordinary FP64 CUDA Core arithmetic on H20 has much lower throughput than INT8 Tensor Core matrix multiplication.</strong> Here, ordinary FP64 CUDA Cores means the SM units that execute per-thread double precision arithmetic. Green’s approximately 98% FP64 metric indicates that this execution path is already busy; yellow’s approximately 95.4% INT Tensor metric indicates heavy use of its matrix resources. Similar percentages refer to very different throughput ceilings, so they do not imply similar absolute operation rates.</p>
+<p><strong>Green is approaching the capacity of a relatively low throughput FP64 path, while yellow runs on a much higher throughput INT8 Tensor Core path.</strong> Even when both use their respective resources efficiently, green can take a comparable amount of time, or longer, because each unit of its work is more expensive to execute. This comparison concerns aggregate parallel throughput, rather than the latency of an individual FP64 instruction versus a Tensor instruction.</p>
+<p>A is read by rows from column-major storage, producing strided accesses, while B’s column reads are more contiguous. Yet A and B have similar times and both heavily use the FP64 pipeline. Along with low DRAM and cache throughput metrics, this supports FP64 execution throughput as the primary limitation in these samples. Strided access remains an optimization candidate, but its presence in source code does not establish a bandwidth bottleneck.</p>
+<p>The functional units inside an SM can be organized as follows:</p>
+<pre><code>SM schedulers and registers
+    ├── Ordinary FP64 CUDA Core path: per-thread arithmetic, lower throughput
+    ├── INT8 Tensor Core path: cooperative matrix multiply-accumulate, high throughput
+    └── Memory, conversion, and other execution paths</code></pre>
+<p>The throughput gap reflects different compute structures and hardware resource allocations. Ordinary FP64 arithmetic handles a wide significand, exponents, normalization, and rounding. INT8 Tensor Cores use narrow integer arithmetic and dedicated matrix structures to execute many operations per cycle while reusing operands. This lets them process GEMM’s large multiply-accumulate workload at high throughput. <a href="https://developer.nvidia.com/blog/nvidia-hopper-architecture-in-depth/#h100_tensor_core_architecture">NVIDIA’s description of Hopper Tensor Cores</a><sup><a aria-label="Reference 3" href="#ref-3" title="NVIDIA Hopper Architecture In-Depth">[3]</a></sup></p>
+<p>Writing an INT8 output does not make the preceding computation suitable for INT8 Tensor Cores. Remainder generation, rounding, and maximum reductions do not directly have a matrix multiply-accumulate structure. Many GPU threads still execute these elementwise operations in parallel, but their combined rate is limited by the relevant resources.</p>
+<p>The complexity comparison in Section 6 therefore needs the hardware execution rates: fast preprocessing performs mainly <span class="math-inline">\(O(sn^2)\)</span> work, but its repeated FP64 operations use the lower throughput path. The main GEMMs perform <span class="math-inline">\(O(sn^3)\)</span> work on much higher throughput INT8 Tensor Cores. <strong>This explains how preprocessing can do less work and still remain expensive.</strong> The next section examines source and assembly to identify the FP64 operations required to produce each INT8 residue.</p>
+<h2 id="8-which-instructions-does-one-int8-residue-require">8. Trace one residue from arithmetic to instructions</h2>
+<p>The counters identify ordinary FP64 throughput as a preprocessing constraint. The instruction trace explains why: preparing small INT8 residues repeatedly invokes a much slower double-precision path.</p>
+<p>Residue generation dominates the relevant preprocessing breakdown. Following one input element under one modulus—from numerical definition to machine instructions—makes it possible to scale the instruction cost to a complete matrix and modulus set.</p>
+<h3 id="81-taking-the-remainder-of-an-fp64-value">8.1 Taking the remainder of an FP64 value</h3>
+<p>Before the remainder function is called, each original element has been scaled by a power of two and truncated toward zero. It is mathematically integer-valued, but the program still stores it in a <code>double</code>. Call this value <span class="math-inline">\(a\)</span>, and the current modulus <span class="math-inline">\(m\)</span>. The goal is a small integer congruent to <span class="math-inline">\(a\)</span> modulo <span class="math-inline">\(m\)</span>, suitable for the subsequent INT8 GEMM.</p>
+<p>Subtracting an integer multiple of the modulus moves the value toward zero:</p>
+<div class="math-display">\[r=a-hm,\qquad h\approx\operatorname{round}(a/m).\]</div>
+<p>An accurately computed nearest integer quotient would leave a residual within roughly half the modulus. The implementation challenge is that <span class="math-inline">\(a\)</span> and its quotient can be large while the desired remainder is small. Preserving low-order information when subtracting large values therefore matters directly to correctness.</p>
+<p>The historical implementation contains:</p>
+<pre><code>const auto val = oz2_table::moduli_dev[j];
+float tmp = __double2float_rn(fma(rint(a * val.y), val.x, a));
+tmp = __fmaf_rn(rintf(tmp * val.w), val.z, tmp);
+tmp = __fmaf_rn(rintf(tmp * val.w), val.z, tmp);
+return static_cast&lt;int8_t&gt;(tmp);</code></pre>
+<p>The four constant-table fields have the following meanings:</p>
+<div aria-label="Data table 7" class="writing-table-scroll" role="region" tabindex="0"><table><thead><tr><th>Field</th><th>Type</th><th>Meaning</th></tr></thead><tbody><tr><td><code>val.x</code></td><td>FP64</td><td><span class="math-inline">\(-m\)</span></td></tr><tr><td><code>val.y</code></td><td>FP64</td><td>Precomputed approximate reciprocal <span class="math-inline">\(\alpha_{64}\approx1/m\)</span></td></tr><tr><td><code>val.z</code></td><td>FP32</td><td><span class="math-inline">\(-m\)</span></td></tr><tr><td><code>val.w</code></td><td>FP32</td><td>Precomputed approximate reciprocal <span class="math-inline">\(\alpha_{32}\approx1/m\)</span></td></tr></tbody></table></div>
+<p>The reciprocals are stored in GPU constant memory, allowing each reduction to estimate the quotient through multiplication. See <a href="https://github.com/RIKEN-RCCS/GEMMul8/blob/d3ffd5f52e89bdc5338ebff6ba1deccc02b5935a/GEMMul8/src/scaling.hpp#L155"><code>mod_8i&lt;double&gt;</code></a> and the <a href="https://github.com/RIKEN-RCCS/GEMMul8/blob/d3ffd5f52e89bdc5338ebff6ba1deccc02b5935a/GEMMul8/src/table.hpp#L26">modulus table</a><sup><a aria-label="Reference 2" href="#ref-2" title="GEMMul8">[2]</a></sup>.</p>
+<h3 id="82-three-reduction-passes-for-remainder-calculation-and-correction">8.2 Three reduction passes for remainder calculation and correction</h3>
+<p><strong>First pass: use FP64 to remove most of the modulus multiples in the input.</strong></p>
+<p>The first arithmetic line expands into:</p>
+<div class="math-display">\[\begin{aligned}
+h_0&amp;=\operatorname{rint}\!\left(\operatorname{fl}_{64}(a\alpha_{64})\right),\\
+r_0&amp;=\operatorname{fma}_{64}(h_0,-m,a),\\
+x_0&amp;=\operatorname{fl}_{32}(r_0).
+\end{aligned}\]</div>
+<p>Here <span class="math-inline">\(\operatorname{fl}_{64}\)</span> and <span class="math-inline">\(\operatorname{fl}_{32}\)</span> round to the corresponding floating point formats. <code>rint</code> rounds to a nearest integer, with ties to even, while retaining a floating point return type. The steps estimate an integer quotient, compute the remaining part, and convert that smaller residual to FP32.</p>
+<p>The FMA matters: <code>fma(h0, -m, a)</code> computes <span class="math-inline">\(a-h_0m\)</span> as one fused operation, rounding only the final result. Rounding the large intermediate product <span class="math-inline">\(h_0m\)</span> separately before subtracting it from <span class="math-inline">\(a\)</span> could discard low-order information needed for the small remainder. <a href="https://docs.nvidia.com/cuda/cuda-math-api/cuda_math_api/group__CUDA__MATH__DOUBLE.html">CUDA definitions of <code>rint</code> and <code>fma</code></a><sup><a aria-label="Reference 6" href="#ref-6" title="CUDA Math API Reference Manual">[6]</a></sup></p>
+<p>FMA controls rounding within the multiply-add. It does not make the estimated quotient exact: the approximate reciprocal and rounding of <span class="math-inline">\(a\alpha_{64}\)</span> can still move <span class="math-inline">\(h_0\)</span> away from the ideal nearest integer quotient. The first residual can therefore retain additional multiples of the modulus.</p>
+<p><strong>Second and third passes: apply FP32 corrections to the smaller residual.</strong></p>
+<p>The two <code>__fmaf_rn</code> lines perform the same operation, with the second consuming the <code>tmp</code> updated by the first:</p>
+<div class="math-display">\[\begin{aligned}
+h_{\ell+1}&amp;=\operatorname{rintf}\!\left(\operatorname{fl}_{32}(x_\ell\alpha_{32})\right),\\
+x_{\ell+1}&amp;=\operatorname{fma}_{32}(h_{\ell+1},-m,x_\ell),
+\qquad \ell=0,1.
+\end{aligned}\]</div>
+<p>Each pass estimates how many additional modulus multiples should be removed to move the current residual toward zero, then subtracts that integer multiple using FMA. The initial FP64 pass has substantially reduced the magnitude, allowing subsequent reduction to operate on smaller values. This explains the mixed precision structure: start in FP64, then correct in FP32.</p>
+<p>Finally, <span class="math-inline">\(x_2\)</span> is converted to the INT8 output. The complete path is:</p>
+<pre><code>Scaled, truncated FP64 input
+    → FP64 quotient estimate and fused subtraction of modulus multiples
+    → Convert to FP32
+    → FP32 quotient estimate and correction, twice
+    → Convert and pack into INT8</code></pre>
+<p>An eight-bit result does not imply that eight-bit intermediate arithmetic is sufficient. Converting the large original <span class="math-inline">\(a\)</span> to FP32 first can change its residue through rounding; later corrections cannot automatically recover lost information. This implementation handles the large value before reducing the precision used for the residual. <a href="https://docs.nvidia.com/cuda/cuda-math-api/cuda_math_api/group__CUDA__MATH__SINGLE.html">Floating point rounding semantics of <code>rintf</code></a><sup><a aria-label="Reference 6" href="#ref-6" title="CUDA Math API Reference Manual">[6]</a></sup></p>
+<h3 id="83-mapping-every-step-to-actual-machine-instructions">8.3 Mapping every step to actual machine instructions</h3>
+<p>Source establishes the numerical steps; compiled instructions establish the work they actually produce. SASS is NVIDIA’s machine instruction representation. The SM90 instruction trace comes from the experiment’s <code>gemmul8.o</code>:</p>
+<pre><code>cuobjdump --dump-sass build/gemmul8.o</code></pre>
+<p>The table follows one element’s data dependencies in <code>vecnorm::scalingB_kernel&lt;double&gt;</code>. Names such as <code>R16</code> and <code>R32</code> identify registers; an FP64 value occupies two adjacent 32-bit registers. Addresses are nonconsecutive because the compiler interleaves operations for other elements.</p>
+<div aria-label="Data table 8" class="writing-table-scroll" role="region" tabindex="0"><table><thead><tr><th>Address</th><th>Actual instruction</th><th>Corresponding computation</th></tr></thead><tbody><tr><td><code>1780</code></td><td><code>DMUL R32, R16, R24.reuse</code></td><td>Multiply by the reciprocal in FP64 to estimate <span class="math-inline">\(a/m\)</span></td></tr><tr><td><code>17d0</code></td><td><code>FRND.F64 R32, R32</code></td><td>Round the approximate quotient to floating point integer <span class="math-inline">\(h_0\)</span></td></tr><tr><td><code>1800</code></td><td><code>DFMA R32, R32, R22, R16</code></td><td>Compute <span class="math-inline">\(a-h_0m\)</span> with an FP64 FMA</td></tr><tr><td><code>1830</code></td><td><code>F2F.F32.F64 R27, R32</code></td><td>Convert the residual to FP32, producing <span class="math-inline">\(x_0\)</span></td></tr><tr><td><code>1890</code></td><td><code>FMUL R36, R23.reuse, R27</code></td><td>Estimate <span class="math-inline">\(x_0/m\)</span> in FP32</td></tr><tr><td><code>18c0</code></td><td><code>FRND R36, R36</code></td><td>Obtain the integer quotient <span class="math-inline">\(h_1\)</span> for the first FP32 correction</td></tr><tr><td><code>18f0</code></td><td><code>FFMA R27, R22, R36, R27</code></td><td>Compute corrected residual <span class="math-inline">\(x_1\)</span></td></tr><tr><td><code>1910</code></td><td><code>FMUL R30, R23, R27</code></td><td>Estimate <span class="math-inline">\(x_1/m\)</span> from the updated residual</td></tr><tr><td><code>1920</code></td><td><code>FRND R30, R30</code></td><td>Obtain the second correction quotient <span class="math-inline">\(h_2\)</span></td></tr><tr><td><code>1960</code></td><td><code>FFMA R27, R22, R30, R27</code></td><td>Compute <span class="math-inline">\(x_2\)</span></td></tr><tr><td><code>1980</code></td><td><code>F2I.TRUNC.NTZ R26, R27</code></td><td>Convert to an integer register value for subsequent INT8 packing</td></tr></tbody></table></div>
+<p>The <code>D</code> in <code>DMUL</code> and <code>DFMA</code> denotes double precision multiply and fused multiply-add; <code>FMUL</code> and <code>FFMA</code> operate in single precision here. <code>FRND</code> rounds a floating point number to an integer value, <code>F2F</code> changes floating point format, and <code>F2I</code> converts to an integer representation. Subsequent <code>PRMT</code> byte packing and stores remain, so the table’s last row is not the end of preprocessing. <a href="https://docs.nvidia.com/cuda/cuda-binary-utilities/index.html">NVIDIA instruction classifications</a><sup><a aria-label="Reference 5" href="#ref-5" title="CUDA Binary Utilities">[5]</a></sup></p>
+<p>This element’s chain contains <strong>one FP64 multiplication, one FP64 rounding, one FP64 FMA, one FP64-to-FP32 conversion, two groups of three FP32 correction instructions, and an integer conversion</strong>. It also has dependencies: the FP32 corrections need the FP64 residual, and the second correction needs the first correction’s result.</p>
+<p>Interleaving elements hides some waiting, and additional threads supply parallel work. Neither removes the arithmetic demand per residue. Once the constrained execution path is already busy, additional parallelism cannot increase throughput indefinitely. Exact pipeline attribution still requires counters; instruction mnemonics alone do not assign all of this work to the FP64 metric.</p>
+<p>This was a read-only inspection of the original object, without another GPU performance run.</p>
+<h3 id="84-how-many-times-does-this-chain-repeat">8.4 How many times does this chain repeat?</h3>
+<p>The enclosing kernel scales and truncates an element before repeatedly calling <code>mod_8i</code> inside its modulus loop. The code handles four elements at a time and calls the function separately on all four values, producing four elementwise reduction chains.</p>
+<p>For two <span class="math-inline">\(n\times n\)</span> input matrices and <span class="math-inline">\(s\)</span> moduli, the valid inputs require</p>
+<div class="math-display">\[N_R=2sn^2\]</div>
+<p>residues. At <span class="math-inline">\(n=8192,s=14\)</span>, this is <strong>1,879,048,192 residues, or about 1.879 billion</strong>. Expanded per valid element, this work alone requires approximately 1.879 billion FP64 multiplications and the same number of FP64 FMAs, plus rounding, FP32 corrections, conversions, and writes.</p>
+<p>These are operation demands summed over elements. GPU instructions are issued at granularities such as warps, with one instruction serving multiple threads. The counts are therefore not hardware instruction issue counts, and multiplying the table’s 11 rows by the residue count would not establish the whole kernel’s dynamic instruction count.</p>
+<p>Other green operations also use FP64. In input statistics, <code>DFMA.RP</code> and <code>DADD.RP</code> implement upward-rounded sum-of-squares accumulation and reductions. Scaling and truncation generate additional instructions. The high FP64 metric in Section 7 reflects the combined demand of the original fused kernel. Section 5’s diagnostic timing further identifies repeated residue generation as its largest time component in this large-matrix, many-modulus configuration.</p>
+<h3 id="85-comparing-the-main-gemm-execution-path">8.5 Comparing the main GEMM execution path</h3>
+<p>The main GEMMs receive INT8 matrices that have already been prepared. They can perform matrix tile multiply-accumulates directly, without repeating the reduction chain for each multiply-add. Nsight Systems recorded this cuBLAS kernel at matrix order 8192:</p>
+<pre><code>sm90_xmma_gemm_i8i32_i8i32_i32_tn_n_tilesize256x128x128_
+warpgroupsize2x1x1_execute_segment_k_off_kernel__5x_cublas</code></pre>
+<p>Its INT8/INT32 matrix kernel identity agrees with NCU’s approximately 95.4% INT Tensor metric. Runtime identity and counters establish the main GEMM Tensor Core path; the profile does not include the full dynamically linked cuBLAS disassembly.</p>
+<p>The cost is now concrete: <strong>every input element under every modulus requires a reduction chain containing FP64 arithmetic, while the main GEMMs perform large numbers of multiply-adds on prepared residues at INT8 Tensor Core throughput.</strong> The next section combines work counts and actual processing rates to check whether they explain the measured time ratio.</p>
+<h2 id="9-why-less-arithmetic-can-still-take-more-time">9. Explain the mismatch between operation count and time</h2>
+<h3 id="91-which-measurement-does-22-describe">9.1 Which measurement does 22% describe?</h3>
+<p>The denominator matters throughout this comparison. A residue-generation cost of 22% means 22% of the yellow main-GEMM time, rather than 22% of the complete stacked-bar duration.</p>
+<p>For square matrices, input conversion generates</p>
+<div class="math-display">\[N_R=2sn^2\]</div>
+<p>residues, while the main products execute</p>
+<div class="math-display">\[N_G=sn^3\]</div>
+<p>integer multiply-adds. Their count ratio is <span class="math-inline">\(N_G/N_R=n/2\)</span>. If each unit of work had the same cost, GEMM would clearly dominate.</p>
+<p>Define <span class="math-inline">\(R_R=N_R/T_{\rm residues}\)</span> as residues generated per second and <span class="math-inline">\(R_G=N_G/T_{\rm GEMM}\)</span> as integer multiply-adds per second. By these definitions of effective rates,</p>
+<div class="math-display">\[\frac{T_{\rm residues}}{T_{\rm GEMM}}
+=\frac{2}{n}\frac{R_G}{R_R}.\]</div>
+<p>At size 8192 with 14 moduli:</p>
+<div aria-label="Data table 9" class="writing-table-scroll" role="region" tabindex="0"><table><thead><tr><th>Work</th><th align="right">Count</th><th align="right">Time</th><th align="right">Effective rate</th></tr></thead><tbody><tr><td>Residue generation</td><td align="right">Approximately 1.879 billion</td><td align="right">12.330 ms</td><td align="right">Approximately 152.4 G residues/s</td></tr><tr><td>INT8 multiply-adds</td><td align="right">Approximately 7.697 trillion</td><td align="right">55.938 ms</td><td align="right">Approximately 137.6 T multiply-adds/s</td></tr></tbody></table></div>
+<p>There are <strong>4096 times</strong> as many multiply-adds, but their effective processing rate is approximately <strong>903 times</strong> higher. Residue generation can therefore still take</p>
+<div class="math-display">\[903/4096\approx22\%.\]</div>
+<p>of the yellow time.</p>
+<p><strong>The 22% is a reformulation of the size-8192, 14-modulus measurements, not a theoretical expectation for other configurations.</strong> The factor 903 comes from measured effective rates; it is neither a fixed hardware peak ratio nor the latency ratio of two instructions. Computing rates from measured times and substituting them back into the equation does not produce an independent prediction. It explains how a rate difference offsets a work-count difference. The preceding timing breakdown, counters, and assembly supply the evidence for the underlying cause.</p>
+<h3 id="92-why-is-complete-preprocessing-275-rather-than-22">9.2 Why is complete preprocessing 27.5% rather than 22%?</h3>
+<p>The 22% covers residue generation only. Fast preprocessing also includes statistics, scaling, and truncation. The same split diagnostic measured 1.239 ms and 1.937 ms for those additional stages, giving</p>
+<div class="math-display">\[\frac{12.330+1.239+1.937}{55.938}\approx27.7\%.\]</div>
+<p>The original fused preprocessing instead gives</p>
+<div class="math-display">\[\frac{15.394}{55.938}\approx27.5\%.\]</div>
+<p>These are close but unequal because splitting adds intermediate memory traffic and kernel launches and changes execution behavior. Diagnostic and original stage timers also have different boundaries. This reconciles the magnitudes; it is not an exact allocation of time within the original fused kernel.</p>
+<h3 id="93-why-can-other-configurations-at-the-same-size-greatly-exceed-275">9.3 Why can other configurations at the same size greatly exceed 27.5%?</h3>
+<p>First change only the modulus count. Section 6 fitted preprocessing at size 8192 as</p>
+<div class="math-display">\[T_{\rm fast,green}\approx3.007+0.8848s\quad\text{ms},\]</div>
+<div class="math-display">\[T_{\rm accu,green}\approx8.316+0.8863s\quad\text{ms}.\]</div>
+<p>Each main GEMM takes approximately 4 ms in these measurements, so <span class="math-inline">\(T_{\rm GEMM}\approx4s\)</span> ms. Consequently,</p>
+<div class="math-display">\[\frac{T_{\rm fast,green}}{T_{\rm GEMM}}
+\approx0.2212+\frac{0.7518}{s},\]</div>
+<div class="math-display">\[\frac{T_{\rm accu,green}}{T_{\rm GEMM}}
+\approx0.2216+\frac{2.079}{s}.\]</div>
+<p>The first term is the preprocessing work that grows with modulus count, relative to the main GEMMs: about 22% in these data. The second term comes from work approximately independent of modulus count, amortized over the <span class="math-inline">\(s\)</span> yellow GEMMs. <strong>With fewer moduli, this cost becomes more prominent relative to yellow.</strong> Here, “fixed” means approximately independent of <span class="math-inline">\(s\)</span> at a given matrix size; it does not mean independent of matrix size.</p>
+<div aria-label="Data table 10" class="writing-table-scroll" role="region" tabindex="0"><table><thead><tr><th align="right">Moduli <span class="math-inline">\(s\)</span></th><th align="right">Fast fitted ratio</th><th align="right">Fast measured ratio</th><th align="right">Accu fitted ratio</th><th align="right">Accu measured ratio</th></tr></thead><tbody><tr><td align="right">2</td><td align="right">59.7%</td><td align="right">59.3%</td><td align="right">126.1%</td><td align="right">126.3%</td></tr><tr><td align="right">14</td><td align="right">27.5%</td><td align="right">27.5%</td><td align="right">37.0%</td><td align="right">37.0%</td></tr><tr><td align="right">20</td><td align="right">25.9%</td><td align="right">25.9%</td><td align="right">32.6%</td><td align="right">32.3%</td></tr></tbody></table></div>
+<p><em>All rows use size 8192. The fit reuses the same measurements to explain their variation; it is not an additional predictive validation.</em></p>
+<p>For fast with 14 moduli, the approximately 3 ms of work independent of modulus count is only about 5.4% of the approximately 56 ms yellow time. With two moduli, it is about 37.6% of the approximately 8 ms yellow time. Adding the work that grows with modulus count raises green/yellow from approximately 27.5% to 59.3%.</p>
+<p>Accu additionally prepares bound-estimation inputs, executes a bound GEMM, and processes the bounds, increasing its cost independent of <span class="math-inline">\(s\)</span>. With two moduli, this is enough to make complete preprocessing exceed the main GEMMs. The measured 126.3% is therefore consistent with this cost structure.</p>
+<h3 id="94-smaller-matrices-change-both-work-ratios-and-effective-rates">9.4 Smaller matrices change both work ratios and effective rates</h3>
+<p>Changing matrix size at a fixed modulus count also changes the expected ratio. The work-count ratio is <span class="math-inline">\(N_G/N_R=n/2\)</span>: 4096 at size 8192, 1024 at size 2048, and only 512 at size 1024. As matrices shrink, the cubic GEMM work decreases relative to quadratic preprocessing. At approximately stable effective rates, residue/yellow and fast green/yellow therefore increase roughly as <span class="math-inline">\(1/n\)</span>.</p>
+<p>Measured fast ratios at a fixed <span class="math-inline">\(s=14\)</span> are:</p>
+<div aria-label="Data table 11" class="writing-table-scroll" role="region" tabindex="0"><table><thead><tr><th align="right">Matrix size <span class="math-inline">\(n\)</span></th><th align="right">Green/yellow</th></tr></thead><tbody><tr><td align="right">1024</td><td align="right">80.6%</td></tr><tr><td align="right">2048</td><td align="right">80.2%</td></tr><tr><td align="right">8192</td><td align="right">27.5%</td></tr><tr><td align="right">16384</td><td align="right">13.9%</td></tr></tbody></table></div>
+<p>The ratio nearly halves from 8192 to 16384, but is almost unchanged between 1024 and 2048. Small configurations therefore do not follow a constant-rate <span class="math-inline">\(1/n\)</span> approximation. Effective throughput on both sides changes with size, work per thread, kernel selection, and launch and synchronization costs. For example, yellow reaches only about 79.6 INT8 TOPS at size 1024 with two moduli, versus about 275.2 TOPS at size 8192 with 14 moduli. The rate ratio 903 cannot be transferred between them. Slower GEMMs by themselves lengthen yellow and reduce green/yellow; a high ratio on a small matrix cannot simply be attributed to low Tensor Core utilization.</p>
+<p>Statistics and scaling are also particularly important for small matrices with few moduli. At size 1024 with two moduli, fast split diagnostics attribute about 45.3% of green to statistics, 28.4% to scaling, and only 26.2% to residue generation. Original green/yellow reaches 234.9%, with a substantially different cost composition from size 8192 with 14 moduli. Splitting also causes a larger disturbance in this small configuration, so these diagnostic shares identify major operations but should not be multiplied into original timings as an exact decomposition.</p>
+<p>For accu, both the extra bound GEMM and the main GEMMs grow as <span class="math-inline">\(n^3\)</span>. At fixed <span class="math-inline">\(s\)</span>, increasing <span class="math-inline">\(n\)</span> cannot amortize that extra product in the same way as quadratic preprocessing.</p>
+<p>When comparing other bars, check <strong>whether the numerator covers residues or complete preprocessing, whether modulus count and matrix size match, and whether accu’s additional bound estimation is included.</strong> Both 22% and 27.5% have specific configurations and timing scopes. Higher or lower ratios elsewhere follow from changes in this work and its effective execution rates.</p>
+<h2 id="10-implications-for-further-optimization">10. Two optimization directions</h2>
+<p>The first optimization target is mod_8i&lt;double&gt;. In the large-matrix, many-modulus diagnostic, residue generation accounts for about 80% of fast preprocessing. It repeats FP64 multiplication and FMA for every element and modulus while the original kernels nearly saturate that pipeline. The following two changes are optimization proposals, rather than measured speedups.</p>
+<h3 id="101-convert-each-element-to-an-integer-representation-once-then-generate-its-residues">10.1 Convert each element to an integer representation once, then generate its residues</h3>
+<p>The current code already scales and truncates each element outside the modulus loop and reuses it in registers across the residue calculations. Since the scaled value is already integral, one exact integer conversion can be performed outside the loop and use primarily integer arithmetic inside it.</p>
+<p>The proposed conversion applies to finite scaled values <span class="math-inline">\(a\)</span> satisfying <span class="math-inline">\(|a|&lt;2^{63}\)</span>. Within this range, an integer-valued FP64 number can be converted exactly to INT64; outside the range, retain the original remainder path. CUDA provides the corresponding <code>__double2ll_rz</code> conversion, but the range must be checked before converting. <a href="https://docs.nvidia.com/cuda/cuda-math-api/cuda_math_api/group__CUDA__MATH__INTRINSIC__CAST.html">NVIDIA conversion documentation</a><sup><a aria-label="Reference 6" href="#ref-6" title="CUDA Math API Reference Manual">[6]</a></sup></p>
+<p>One concrete approach splits the magnitude into high and low unsigned 32-bit integers:</p>
+<div class="math-display">\[|a|=u_0+2^{32}u_1.\]</div>
+<p>Perform the split once. For each fixed modulus <span class="math-inline">\(m_t\)</span>, precompute <span class="math-inline">\(\beta_t=2^{32}\bmod m_t\)</span>, then use</p>
+<div class="math-display">\[|a|\bmod m_t=
+\left[(u_0\bmod m_t)+\beta_t(u_1\bmod m_t)\right]\bmod m_t\]</div>
+<p>to generate the residue. Finally, handle the original sign and map the result to the signed residue required for INT8. Since <span class="math-inline">\(m_t\le256\)</span>, after reducing the high and low parts separately, the expression in brackets is at most <span class="math-inline">\(255+255^2=65280\)</span>, so the combination can use 32-bit integer arithmetic. For <span class="math-inline">\(m_t=256\)</span>, the result must also stay within the INT8 range.</p>
+<p>The moduli come from a fixed table, so specialized code can be generated for each modulus to implement these remainders with fixed-divisor integer reductions. Inspect whether the compiler lowers them to instructions such as multiply-high, shifts, and corrections. Directly replacing floating point reduction with a general runtime INT64 <code>%</code> does not guarantee a speedup. Keep conversion, splitting, and range checks in the original fused kernel where possible, avoiding an additional full INT64 intermediate matrix written to memory.</p>
+<p>This changes the work arrangement to:</p>
+<pre><code>Current:   scale/truncate once → FP64 initial reduction and FP32 corrections for each modulus
+Prototype: scale/truncate once → convert/split once → integer reduction for each modulus</code></pre>
+<p>It targets the repeated FP64 cost identified earlier.</p>
+<h3 id="102-group-moduli-to-overlap-input-preparation-and-the-main-gemms">10.2 Group moduli to overlap input preparation and the main GEMMs</h3>
+<p>A second proposed change prepares inputs for a small group of moduli at a time, after the residue implementation has been validated. Record an event when preparation finishes, then let the compute stream run the corresponding GEMMs while the preparation stream generates the next group’s inputs. Alternate between two input buffers, overwriting each only after the GEMMs consuming it have finished. Retain the output residues from all channels for subsequent CRT reconstruction.</p>
+<pre><code>Preparation: group 0 inputs → group 1 inputs → group 2 inputs
+Compute:                     group 0 GEMMs → group 1 GEMMs → group 2 GEMMs</code></pre>
+<p>This experiment tries to hide some of the preprocessing time. It requires removing stage synchronizations that prevent overlap and avoiding repeated input statistics for each group. Grouping may increase input reads and kernel launches. FP64 and Tensor Core operations also share resources such as SMs and registers, so experiments are needed to determine whether the change actually improves performance.</p>
+<blockquote>
+<p>Note: Small configurations such as size 1024 with two moduli differ from large matrices: residue generation accounts for only about 26% of green in the split diagnostic. They need to be considered separately.</p>
+</blockquote>
+<h2 id="11-closing-thoughts">11. What the profile teaches</h2>
+<p>Ozaki II shows how a numerical algorithm can exploit a hardware asymmetry: several exact small-integer GEMMs, combined with controlled scaling and high-precision reconstruction, can outperform a native double-precision product.</p>
+<p>The same design moves the bottleneck. Once INT8 Tensor Cores accelerate the main GEMMs, bound estimation, scaling, and residue generation become visible. In the sampled H20 kernels, ordinary FP64 work limits preprocessing even while INT8 matrix units execute far more arithmetic per second.</p>
+<p>A useful performance explanation connects three levels: the work generated by the algorithm, the instructions emitted for that work, and the throughput available to those instructions. Complexity estimates, stage timings, hardware counters, and assembly each contribute a different part of that explanation.</p>
+<h2 id="references">References</h2>
+<p><span id="ref-1">[1]</span> K. Ozaki, Y. Uchino, and T. Imamura. <a href="https://arxiv.org/abs/2504.08009v4">Ozaki Scheme II: A GEMM-oriented emulation of floating-point matrix multiplication using an integer modular technique</a>. arXiv:2504.08009v4, 2026.</p>
+<p><span id="ref-2">[2]</span> RIKEN Center for Computational Science. <a href="https://github.com/RIKEN-RCCS/GEMMul8/tree/d3ffd5f52e89bdc5338ebff6ba1deccc02b5935a/GEMMul8">GEMMul8</a>. Source code, commit <code>d3ffd5f52e89bdc5338ebff6ba1deccc02b5935a</code>, April 9, 2025.</p>
+<p><span id="ref-3">[3]</span> M. Andersch et al. <a href="https://developer.nvidia.com/blog/nvidia-hopper-architecture-in-depth/">NVIDIA Hopper Architecture In-Depth</a>. NVIDIA Technical Blog, March 22, 2022.</p>
+<p><span id="ref-4">[4]</span> NVIDIA. <a href="https://docs.nvidia.com/nsight-compute/ProfilingGuide/index.html">Nsight Compute Profiling Guide</a>. Online documentation. Accessed October 1, 2026.</p>
+<p><span id="ref-5">[5]</span> NVIDIA. <a href="https://docs.nvidia.com/cuda/cuda-binary-utilities/index.html">CUDA Binary Utilities</a>. Online documentation. Accessed October 1, 2026.</p>
+<p><span id="ref-6">[6]</span> NVIDIA. <a href="https://docs.nvidia.com/cuda/cuda-math-api/index.html">CUDA Math API Reference Manual</a>. Online documentation. Accessed October 1, 2026.</p>
+<h2 id="supplementary-throughput">Supplement. Complete paper throughput tables</h2>
+<p>The following tables retain all matrix sizes and modulus configurations from the paper-results supplement. Throughput uses the final high-precision task as the effective work.</p>
+<h2 id="section-1">1 The Ozaki II pipeline and the conditions for INT8 computation</h2>
+<h3 id="section-2">1.1 From FP64 inputs to multiple INT8 GEMMs</h3>
+<div aria-label="Data table 12" class="writing-table-scroll" role="region" tabindex="0"><table>
+<thead>
+<tr>
+<th>Stage</th>
+<th>Operation</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Scale and integerize</td>
+<td><span><span><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>A</mi><mo lspace="0em" mathvariant="normal" rspace="0em">′</mo></msup><mo>=</mo><mi mathvariant="normal">trunc</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi>D</mi><mi>A</mi><mo stretchy="false">)</mo><mo separator="true">,</mo><mtext> </mtext><msup><mi>B</mi><mo lspace="0em" mathvariant="normal" rspace="0em">′</mo></msup><mo>=</mo><mi mathvariant="normal">trunc</mi><mo>⁡</mo><mo stretchy="false">(</mo><mi>B</mi><mi>E</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">A'=\operatorname{trunc}(DA),\ B'=\operatorname{trunc}(BE)</annotation></semantics></math></span><span aria-hidden="true"><span><span style="height:0.7519em;"></span><span><span>A</span><span><span><span><span style="height:0.7519em;"><span style="top:-3.063em;margin-right:0.05em;"><span style="height:2.7em;"></span><span><span><span>′</span></span></span></span></span></span></span></span></span><span style="margin-right:0.2778em;"></span><span>=</span><span style="margin-right:0.2778em;"></span></span><span><span style="height:1.0019em;vertical-align:-0.25em;"></span><span><span>trunc</span></span><span>(</span><span style="margin-right:0.0278em;">D</span><span>A</span><span>)</span><span>,</span><span> </span><span style="margin-right:0.1667em;"></span><span><span style="margin-right:0.0502em;">B</span><span><span><span><span style="height:0.7519em;"><span style="top:-3.063em;margin-right:0.05em;"><span style="height:2.7em;"></span><span><span><span>′</span></span></span></span></span></span></span></span></span><span style="margin-right:0.2778em;"></span><span>=</span><span style="margin-right:0.2778em;"></span></span><span><span style="height:1em;vertical-align:-0.25em;"></span><span><span>trunc</span></span><span>(</span><span style="margin-right:0.0502em;">B</span><span style="margin-right:0.0576em;">E</span><span>)</span></span></span></span></td>
+<td>Integer-valued inputs with controlled range</td>
+</tr>
+<tr>
+<td>Form input residues</td>
+<td><span><span><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>A</mi><mi>t</mi></msub><mo>=</mo><msub><mi>ρ</mi><msub><mi>m</mi><mi>t</mi></msub></msub><mo stretchy="false">(</mo><msup><mi>A</mi><mo lspace="0em" mathvariant="normal" rspace="0em">′</mo></msup><mo stretchy="false">)</mo><mo separator="true">,</mo><mtext> </mtext><msub><mi>B</mi><mi>t</mi></msub><mo>=</mo><msub><mi>ρ</mi><msub><mi>m</mi><mi>t</mi></msub></msub><mo stretchy="false">(</mo><msup><mi>B</mi><mo lspace="0em" mathvariant="normal" rspace="0em">′</mo></msup><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">A_t=\rho_{m_t}(A'),\ B_t=\rho_{m_t}(B')</annotation></semantics></math></span><span aria-hidden="true"><span><span style="height:0.8333em;vertical-align:-0.15em;"></span><span><span>A</span><span><span><span><span style="height:0.2806em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span style="height:2.7em;"></span><span><span>t</span></span></span></span><span>​</span></span><span><span style="height:0.15em;"><span></span></span></span></span></span></span><span style="margin-right:0.2778em;"></span><span>=</span><span style="margin-right:0.2778em;"></span></span><span><span style="height:1.002em;vertical-align:-0.2501em;"></span><span><span>ρ</span><span><span><span><span style="height:0.1514em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span style="height:2.7em;"></span><span><span><span><span>m</span><span><span><span><span style="height:0.2963em;"><span style="top:-2.357em;margin-left:0em;margin-right:0.0714em;"><span style="height:2.5em;"></span><span><span>t</span></span></span></span><span>​</span></span><span><span style="height:0.143em;"><span></span></span></span></span></span></span></span></span></span></span><span>​</span></span><span><span style="height:0.2501em;"><span></span></span></span></span></span></span><span>(</span><span><span>A</span><span><span><span><span style="height:0.7519em;"><span style="top:-3.063em;margin-right:0.05em;"><span style="height:2.7em;"></span><span><span><span>′</span></span></span></span></span></span></span></span></span><span>)</span><span>,</span><span> </span><span style="margin-right:0.1667em;"></span><span><span style="margin-right:0.0502em;">B</span><span><span><span><span style="height:0.2806em;"><span style="top:-2.55em;margin-left:-0.0502em;margin-right:0.05em;"><span style="height:2.7em;"></span><span><span>t</span></span></span></span><span>​</span></span><span><span style="height:0.15em;"><span></span></span></span></span></span></span><span style="margin-right:0.2778em;"></span><span>=</span><span style="margin-right:0.2778em;"></span></span><span><span style="height:1.002em;vertical-align:-0.2501em;"></span><span><span>ρ</span><span><span><span><span style="height:0.1514em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span style="height:2.7em;"></span><span><span><span><span>m</span><span><span><span><span style="height:0.2963em;"><span style="top:-2.357em;margin-left:0em;margin-right:0.0714em;"><span style="height:2.5em;"></span><span><span>t</span></span></span></span><span>​</span></span><span><span style="height:0.143em;"><span></span></span></span></span></span></span></span></span></span></span><span>​</span></span><span><span style="height:0.2501em;"><span></span></span></span></span></span></span><span>(</span><span><span style="margin-right:0.0502em;">B</span><span><span><span><span style="height:0.7519em;"><span style="top:-3.063em;margin-right:0.05em;"><span style="height:2.7em;"></span><span><span><span>′</span></span></span></span></span></span></span></span></span><span>)</span></span></span></span></td>
+<td>One pair of INT8 matrices per modulus; <span><span><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ρ</mi></mrow><annotation encoding="application/x-tex">\rho</annotation></semantics></math></span><span aria-hidden="true"><span><span style="height:0.625em;vertical-align:-0.1944em;"></span><span>ρ</span></span></span></span> denotes centered reduction</td>
+</tr>
+<tr>
+<td>Main matrix multiplication</td>
+<td><span><span><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>P</mi><mi>t</mi></msub><mo>=</mo><msub><mi>A</mi><mi>t</mi></msub><msub><mi>B</mi><mi>t</mi></msub></mrow><annotation encoding="application/x-tex">P_t=A_tB_t</annotation></semantics></math></span><span aria-hidden="true"><span><span style="height:0.8333em;vertical-align:-0.15em;"></span><span><span style="margin-right:0.1389em;">P</span><span><span><span><span style="height:0.2806em;"><span style="top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;"><span style="height:2.7em;"></span><span><span>t</span></span></span></span><span>​</span></span><span><span style="height:0.15em;"><span></span></span></span></span></span></span><span style="margin-right:0.2778em;"></span><span>=</span><span style="margin-right:0.2778em;"></span></span><span><span style="height:0.8333em;vertical-align:-0.15em;"></span><span><span>A</span><span><span><span><span style="height:0.2806em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span style="height:2.7em;"></span><span><span>t</span></span></span></span><span>​</span></span><span><span style="height:0.15em;"><span></span></span></span></span></span></span><span><span style="margin-right:0.0502em;">B</span><span><span><span><span style="height:0.2806em;"><span style="top:-2.55em;margin-left:-0.0502em;margin-right:0.05em;"><span style="height:2.7em;"></span><span><span>t</span></span></span></span><span>​</span></span><span><span style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span></td>
+<td>INT8 inputs with INT32 accumulation and output</td>
+</tr>
+<tr>
+<td>Reduce the output</td>
+<td><span><span><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>R</mi><mi>t</mi></msub><mo>=</mo><msub><mi>P</mi><mi>t</mi></msub><mtext> </mtext><mo lspace="0.22em" rspace="0.22em"><mrow><mi mathvariant="normal">m</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">d</mi></mrow></mo><mtext> </mtext><msub><mi>m</mi><mi>t</mi></msub></mrow><annotation encoding="application/x-tex">R_t=P_t\bmod m_t</annotation></semantics></math></span><span aria-hidden="true"><span><span style="height:0.8333em;vertical-align:-0.15em;"></span><span><span style="margin-right:0.0077em;">R</span><span><span><span><span style="height:0.2806em;"><span style="top:-2.55em;margin-left:-0.0077em;margin-right:0.05em;"><span style="height:2.7em;"></span><span><span>t</span></span></span></span><span>​</span></span><span><span style="height:0.15em;"><span></span></span></span></span></span></span><span style="margin-right:0.2778em;"></span><span>=</span><span style="margin-right:0.2778em;"></span></span><span><span style="height:0.8444em;vertical-align:-0.15em;"></span><span><span style="margin-right:0.1389em;">P</span><span><span><span><span style="height:0.2806em;"><span style="top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;"><span style="height:2.7em;"></span><span><span>t</span></span></span></span><span>​</span></span><span><span style="height:0.15em;"><span></span></span></span></span></span></span><span style="margin-right:0.0556em;"></span><span style="margin-right:0.2222em;"></span><span><span><span>mod</span></span></span><span style="margin-right:0.0556em;"></span><span style="margin-right:0.2222em;"></span></span><span><span style="height:0.5806em;vertical-align:-0.15em;"></span><span><span>m</span><span><span><span><span style="height:0.2806em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span style="height:2.7em;"></span><span><span>t</span></span></span></span><span>​</span></span><span><span style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span></td>
+<td>Each output's nonnegative residue under that modulus</td>
+</tr>
+<tr>
+<td>Combine and rescale</td>
+<td>Combine the residues into <span><span><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>X</mi></mrow><annotation encoding="application/x-tex">X</annotation></semantics></math></span><span aria-hidden="true"><span><span style="height:0.6833em;"></span><span style="margin-right:0.0785em;">X</span></span></span></span> using CRT; return <span><span><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mover accent="true"><mi>C</mi><mo stretchy="true">^</mo></mover><mo>=</mo><msup><mi>D</mi><mrow><mo>−</mo><mn>1</mn></mrow></msup><mi>X</mi><msup><mi>E</mi><mrow><mo>−</mo><mn>1</mn></mrow></msup></mrow><annotation encoding="application/x-tex">\widehat C=D^{-1}XE^{-1}</annotation></semantics></math></span><span aria-hidden="true"><span><span style="height:0.9233em;"></span><span><span><span><span style="height:0.9233em;"><span style="top:-3em;"><span style="height:3em;"></span><span style="margin-right:0.0715em;">C</span></span><span style="width:calc(100% - 0.1667em);margin-left:0.1667em;top:-3.6833em;"><span style="height:3em;"></span><span style="height:0.24em;"><svg height="0.24em" preserveaspectratio="none" viewbox="0 0 1062 239" width="100%" xmlns="http://www.w3.org/2000/svg"><path d="M529 0h5l519 115c5 1 9 5 9 10 0 1-1 2-1 3l-4 22
+c-1 5-5 9-11 9h-2L532 67 19 159h-2c-5 0-9-4-11-9l-5-22c-1-6 2-12 8-13z"></path></svg></span></span></span></span></span></span><span style="margin-right:0.2778em;"></span><span>=</span><span style="margin-right:0.2778em;"></span></span><span><span style="height:0.8141em;"></span><span><span style="margin-right:0.0278em;">D</span><span><span><span><span style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span style="height:2.7em;"></span><span><span><span>−</span><span>1</span></span></span></span></span></span></span></span></span><span style="margin-right:0.0785em;">X</span><span><span style="margin-right:0.0576em;">E</span><span><span><span><span style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span style="height:2.7em;"></span><span><span><span>−</span><span>1</span></span></span></span></span></span></span></span></span></span></span></span></td>
+<td>An FP64 result at the original scale</td>
+</tr>
+</tbody></table></div>
+<h3 id="section-3">1.2 Why the modulus limit is 256</h3>
+<h3 id="section-4">1.3 The dot product length determines whether INT32 accumulation is safe</h3>
+<h3 id="section-5">1.4 How many GEMMs are required</h3>
+<div aria-label="Data table 13" class="writing-table-scroll" role="region" tabindex="0"><table>
+<thead>
+<tr>
+<th>Constraint</th>
+<th>Controlled by</th>
+<th>What it determines</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Accumulation range within each integer GEMM</td>
+<td>Residue magnitudes and inner dimension <span><span><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>q</mi></mrow><annotation encoding="application/x-tex">q</annotation></semantics></math></span><span aria-hidden="true"><span><span style="height:0.625em;vertical-align:-0.1944em;"></span><span style="margin-right:0.0359em;">q</span></span></span></span></td>
+<td>Whether the individual product can be computed exactly</td>
+</tr>
+<tr>
+<td>Reconstruction range of the complete integer product</td>
+<td>Modulus product <span><span><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>M</mi></mrow><annotation encoding="application/x-tex">M</annotation></semantics></math></span><span aria-hidden="true"><span><span style="height:0.6833em;"></span><span style="margin-right:0.109em;">M</span></span></span></span> and input scaling</td>
+<td>Whether enough input information can be accommodated</td>
+</tr>
+</tbody></table></div>
+<h2 id="section-6">2 Why constrain scaled entries by <span><span><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>2</mn><mi>k</mi></msup></mrow><annotation encoding="application/x-tex">2^k</annotation></semantics></math></span><span aria-hidden="true"><span><span style="height:0.8491em;"></span><span><span>2</span><span><span><span><span style="height:0.8491em;"><span style="top:-3.063em;margin-right:0.05em;"><span style="height:2.7em;"></span><span><span style="margin-right:0.0315em;">k</span></span></span></span></span></span></span></span></span></span></span></h2>
+<h2 id="section-7">3 Performance gains and where execution time goes</h2>
+<h3 id="section-8">3.1 How much faster can INT8 emulation be than native FP64</h3>
+<div aria-label="Data table 14" class="writing-table-scroll" role="region" tabindex="0"><table>
+<thead>
+<tr>
+<th>GPU</th>
+<th align="right">Ordinary FP64</th>
+<th align="right">FP64 Tensor Core</th>
+<th align="right">INT8 Tensor Core</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Hopper specifications corresponding to GH200</td>
+<td align="right">34</td>
+<td align="right">67</td>
+<td align="right">1979</td>
+</tr>
+<tr>
+<td>RTX 4090</td>
+<td align="right">1.29</td>
+<td align="right">—</td>
+<td align="right">660.6</td>
+</tr>
+</tbody></table></div>
+<div aria-label="Data table 15" class="writing-table-scroll" role="region" tabindex="0"><table>
+<thead>
+<tr>
+<th>Method</th>
+<th align="right">2048</th>
+<th align="right">4096</th>
+<th align="right">8192</th>
+<th align="right">16384</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>DGEMM</td>
+<td align="right">56.9</td>
+<td align="right">61.3</td>
+<td align="right">62.0</td>
+<td align="right">60.9</td>
+</tr>
+<tr>
+<td>fast-14</td>
+<td align="right">16.5</td>
+<td align="right">48.6</td>
+<td align="right">72.1</td>
+<td align="right">80.2</td>
+</tr>
+<tr>
+<td>fast-15</td>
+<td align="right">15.4</td>
+<td align="right">45.2</td>
+<td align="right">67.4</td>
+<td align="right">74.6</td>
+</tr>
+<tr>
+<td>fast-16</td>
+<td align="right">14.6</td>
+<td align="right">43.2</td>
+<td align="right">63.8</td>
+<td align="right">70.4</td>
+</tr>
+<tr>
+<td>fast-17</td>
+<td align="right">13.8</td>
+<td align="right">40.5</td>
+<td align="right">60.1</td>
+<td align="right">66.1</td>
+</tr>
+<tr>
+<td>fast-18</td>
+<td align="right">13.0</td>
+<td align="right">38.3</td>
+<td align="right">56.9</td>
+<td align="right">62.6</td>
+</tr>
+<tr>
+<td>accu-14</td>
+<td align="right">14.7</td>
+<td align="right">42.7</td>
+<td align="right">64.7</td>
+<td align="right">71.1</td>
+</tr>
+<tr>
+<td>accu-15</td>
+<td align="right">14.0</td>
+<td align="right">40.2</td>
+<td align="right">60.9</td>
+<td align="right">66.9</td>
+</tr>
+<tr>
+<td>accu-16</td>
+<td align="right">13.3</td>
+<td align="right">38.5</td>
+<td align="right">58.0</td>
+<td align="right">63.3</td>
+</tr>
+<tr>
+<td>accu-17</td>
+<td align="right">12.6</td>
+<td align="right">36.4</td>
+<td align="right">55.1</td>
+<td align="right">59.9</td>
+</tr>
+<tr>
+<td>accu-18</td>
+<td align="right">12.0</td>
+<td align="right">34.7</td>
+<td align="right">52.2</td>
+<td align="right">56.6</td>
+</tr>
+</tbody></table></div>
+<div aria-label="Data table 16" class="writing-table-scroll" role="region" tabindex="0"><table>
+<thead>
+<tr>
+<th>Method</th>
+<th align="right">2048</th>
+<th align="right">4096</th>
+<th align="right">8192</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>DGEMM</td>
+<td align="right">0.61</td>
+<td align="right">0.62</td>
+<td align="right">0.62</td>
+</tr>
+<tr>
+<td>fast-14</td>
+<td align="right">3.73</td>
+<td align="right">6.94</td>
+<td align="right">9.81</td>
+</tr>
+<tr>
+<td>fast-15</td>
+<td align="right">3.54</td>
+<td align="right">6.55</td>
+<td align="right">9.20</td>
+</tr>
+<tr>
+<td>fast-16</td>
+<td align="right">3.31</td>
+<td align="right">6.22</td>
+<td align="right">8.76</td>
+</tr>
+<tr>
+<td>fast-17</td>
+<td align="right">3.07</td>
+<td align="right">5.90</td>
+<td align="right">8.29</td>
+</tr>
+<tr>
+<td>fast-18</td>
+<td align="right">2.91</td>
+<td align="right">5.56</td>
+<td align="right">7.83</td>
+</tr>
+<tr>
+<td>accu-14</td>
+<td align="right">3.46</td>
+<td align="right">6.51</td>
+<td align="right">9.23</td>
+</tr>
+<tr>
+<td>accu-15</td>
+<td align="right">3.29</td>
+<td align="right">6.04</td>
+<td align="right">8.68</td>
+</tr>
+<tr>
+<td>accu-16</td>
+<td align="right">3.10</td>
+<td align="right">5.69</td>
+<td align="right">8.26</td>
+</tr>
+<tr>
+<td>accu-17</td>
+<td align="right">2.93</td>
+<td align="right">5.40</td>
+<td align="right">7.81</td>
+</tr>
+<tr>
+<td>accu-18</td>
+<td align="right">2.84</td>
+<td align="right">5.18</td>
+<td align="right">7.41</td>
+</tr>
+</tbody></table></div>
+<h3 id="section-9">3.2 Where one Ozaki II call spends its time</h3>
+<div aria-label="Data table 17" class="writing-table-scroll" role="region" tabindex="0"><table>
+<thead>
+<tr>
+<th>Color</th>
+<th>Implementation stage</th>
+<th>Work included</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Green</td>
+<td><code>conv_64f_2_8i</code></td>
+<td>Bound estimation, scaling, truncation, all INT8 input residues; also accu's bound GEMM</td>
+</tr>
+<tr>
+<td>Yellow</td>
+<td><code>cublasGemmEx</code></td>
+<td>The <span><span><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>s</mi></mrow><annotation encoding="application/x-tex">s</annotation></semantics></math></span><span aria-hidden="true"><span><span style="height:0.4306em;"></span><span>s</span></span></span></span> main INT8 × INT8 → INT32 products</td>
+</tr>
+<tr>
+<td>Blue</td>
+<td><code>conv_32i_2_8u</code></td>
+<td>Reduce each INT32 output to a nonnegative UINT8 residue</td>
+</tr>
+<tr>
+<td>Red</td>
+<td><code>inverse_scaling</code></td>
+<td>CRT combination, range reduction, and inverse scaling</td>
+</tr>
+</tbody></table></div>

@@ -11,6 +11,8 @@ menu:
     url: "/projects/"
   - title: "CV"
     url: "/cv/"
+  - title: "Writing"
+    url: "/writing/"
   - title: "Blog"
     url: "/blog/"
   - title: "Pages"
@@ -64,6 +66,10 @@ hero:
 projects:
   title: "Latest works"
   description: "Self-improving AI, automated research, and biomolecular design."
+
+writing:
+  title: "Writing"
+  description: "Notes on machine learning systems, GPU kernels, and efficient inference."
 
 blog:
   title: "Recent Posts"

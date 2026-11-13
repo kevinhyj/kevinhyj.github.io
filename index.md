@@ -34,7 +34,7 @@ description: "Yanjie Huang (黄䶮杰) is an undergraduate researcher at Shangha
   <div class="container">
     <p class="eyebrow">Research interests</p>
     <h2 id="research-statement">I build self-improving AI systems for automated research.</h2>
-    <p class="research-summary">My work connects algorithm design with scientific discovery, from multimodal generation and ML engineering to biomolecular design.</p>
+    <p class="research-summary">I’m an Algorithm Intern at Kimi (Moonshot AI). My work connects algorithm design with scientific discovery, from multimodal generation and ML engineering to biomolecular design.</p>
     <div class="research-directions">
       <div>
         <h3>Learning from generated experience</h3>

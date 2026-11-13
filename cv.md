@@ -39,6 +39,9 @@ description: "Academic CV of Yanjie Huang (黄䶮杰), a Shanghai Jiao Tong Univ
     <section class="cv-section" aria-labelledby="cv-experience">
       <div class="cv-section-title"><p class="eyebrow">02</p><h2 id="cv-experience">Research Experience</h2></div>
       <div class="cv-section-body">
+        <article class="cv-entry">
+          <div class="cv-entry-head"><div class="cv-institution"><div><h3>Kimi (Moonshot AI)</h3><p class="cv-role">Algorithm Intern</p></div></div></div>
+        </article>
         <article class="cv-entry cv-entry-featured">
           <div class="cv-entry-head"><div class="cv-institution"><img class="cv-institution-logo" src="{{ '/assets/shared/logos/stanford.webp' | relative_url }}" alt="Stanford University logo"><div><h3>Stanford University</h3><p class="cv-role">Research Assistant</p></div></div></div>
           <p>Advisors: <strong>Prof. Yejin Choi</strong>, <strong>Prof. Jure Leskovec</strong>, and <strong>Dr. Fang Wu</strong>.</p>
